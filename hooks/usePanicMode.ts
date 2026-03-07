@@ -40,7 +40,7 @@ export function usePanicMode(panicWord: string = 'auxilio') {
 
             recognitionRef.current.onend = () => {
                 // AUTO-RESTART: El pánico NUNCA deja de escuchar
-                console.log("🎤 Panic Mic ended, restarting...");
+                // console.log("🎤 Panic Mic ended, restarting...");
                 try {
                     recognitionRef.current.start();
                 } catch (e) {
@@ -49,8 +49,8 @@ export function usePanicMode(panicWord: string = 'auxilio') {
             };
 
             recognitionRef.current.onerror = (event: any) => {
-                // 'no-speech' es normal en un micrófono que siempre escucha. Lo ignoramos.
-                if (event.error === 'no-speech') return;
+                // Ignoramos errores comunes que ensucian la consola
+                if (event.error === 'no-speech' || event.error === 'network') return;
 
                 console.error("🎤 Panic Mic error:", event.error);
 
