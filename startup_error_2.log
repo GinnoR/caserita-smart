@@ -1,0 +1,9 @@
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3006
+- Network:       http://192.168.18.4:3006
+- Environments: .env.local
+
+✓ Starting...
+⨯ Unable to acquire lock at C:\Users\hp\Downloads\Caserita 10feb26\caserita-smart\.next\dev\lock, is another instance of next dev running?
+  Suggestion: If you intended to restart next dev, terminate the other process, and then try again.
+[?25h
