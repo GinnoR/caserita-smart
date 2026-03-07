@@ -973,8 +973,42 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     {/* Contenido con paddingBottom para no quedar bajo la nav bar fija */}
                     <div style={{ flex: 1, overflowY: 'auto', padding: '8px', paddingBottom: '72px' }}>
                         {activeTab === 'pedidos' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative' }}>
                                 <OrderPanel cart={cart} onRemove={removeFromCart} onUpdateQty={updateCartQty} onManualEntry={() => speak("Pedido manual iniciado")} />
+
+                                {/* BOTONES RÁPIDOS (Hablar y Pánico) en pantalla de pedidos */}
+                                <div className="fixed right-4 bottom-20 flex flex-col gap-3 z-40">
+                                    <button
+                                        onClick={triggerPanicAction}
+                                        className="bg-red-600 text-white p-4 rounded-full shadow-2xl border-4 border-white active:scale-90 transition-transform"
+                                        title="Pánico"
+                                    >
+                                        <ShieldAlert className="w-8 h-8" />
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            if (isListening) stopListening();
+                                            else startListening();
+                                        }}
+                                        className={`p-5 rounded-full shadow-2xl border-4 border-white active:scale-90 transition-all ${isListening ? 'bg-red-500 animate-pulse' : 'bg-orange-500'
+                                            }`}
+                                    >
+                                        {isListening ? (
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 bg-white rounded-full animate-ping" />
+                                                <span className="text-white font-bold text-xs uppercase">Parar</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} className="text-white">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                                </svg>
+                                                <span className="text-white font-black text-[10px] mt-0.5">DICTAR</span>
+                                            </div>
+                                        )}
+                                    </button>
+                                </div>
+
                                 <PaymentMethods onPayment={handlePayment} />
                             </div>
                         )}

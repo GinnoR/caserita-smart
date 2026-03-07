@@ -33,40 +33,40 @@ export function OrderPanel({
             </div>
 
             {/* Table Header */}
-            <div className="grid grid-cols-[55px_1fr_35px_55px_55px_55px_60px_45px] gap-2 px-2 py-1 bg-slate-100 text-slate-700 text-[9px] font-bold border-b border-slate-300 uppercase">
-                <div className="w-12">Código</div>
+            <div className="grid grid-cols-[1fr_40px_50px_50px_55px_35px] md:grid-cols-[55px_1fr_35px_55px_55px_55px_60px_45px] gap-1 md:gap-2 px-2 py-1 bg-slate-100 text-slate-700 text-[9px] font-bold border-b border-slate-300 uppercase">
+                <div className="hidden md:block">Código</div>
                 <div>Descripción</div>
-                <div className="w-8 text-center">UM</div>
-                <div className="w-14 text-right">Pr.U</div>
-                <div className="w-14 text-right">Monto S/</div>
-                <div className="w-14 text-right">Recalc.</div>
-                <div className="w-14 text-right">Parcial</div>
-                <div className="w-10 text-center">Op</div>
+                <div className="text-center">UM</div>
+                <div className="text-right">Pr.U</div>
+                <div className="hidden md:block text-right">Monto S/</div>
+                <div className="text-right">Cant.</div>
+                <div className="hidden md:block text-right">Parcial</div>
+                <div className="text-center">Op</div>
             </div>
 
             {/* Items List (Scrollable) */}
-            <div className="flex-1 overflow-y-auto p-2 space-y-1 bg-slate-50">
+            <div className="flex-1 overflow-y-auto p-1 md:p-2 space-y-1 bg-slate-50">
                 {cart.length === 0 ? (
                     <div className="text-center text-slate-400 py-8 italic">No hay productos en el pedido</div>
                 ) : (
                     cart.map((item, idx) => (
-                        <div key={idx} className="grid grid-cols-[55px_1fr_35px_55px_55px_55px_60px_45px] gap-2 items-center px-1 py-1 bg-white rounded shadow-sm border border-slate-100 text-slate-800 text-[11px]">
-                            <div className="w-12 font-mono text-slate-500 text-[9px] truncate">{item.code || '-'}</div>
-                            <div className="font-medium truncate leading-tight">{item.name}</div>
-                            <div className="w-8 text-center text-[9px] text-slate-500 bg-slate-100 rounded px-1">
+                        <div key={idx} className="grid grid-cols-[1fr_40px_50px_50px_55px_35px] md:grid-cols-[55px_1fr_35px_55px_55px_55px_60px_45px] gap-1 md:gap-2 items-center px-1 py-1 bg-white rounded shadow-sm border border-slate-100 text-slate-800 text-[11px]">
+                            <div className="hidden md:block font-mono text-slate-500 text-[9px] truncate">{item.code || '-'}</div>
+                            <div className="font-bold md:font-medium truncate leading-tight uppercase">{item.name}</div>
+                            <div className="text-center text-[9px] text-slate-500 bg-slate-100 rounded px-1">
                                 {item.um}
                             </div>
-                            <div className="w-14 text-right">{(item.price || 0).toFixed(2)}</div>
-                            <div className="w-14 text-right font-medium text-blue-600 bg-blue-50 px-1 rounded">
+                            <div className="text-right font-medium">{(item.price || 0).toFixed(2)}</div>
+                            <div className="hidden md:block text-right font-medium text-blue-600 bg-blue-50 px-1 rounded">
                                 {item.targetSoles ? item.targetSoles.toFixed(2) : '-'}
                             </div>
-                            <div className="w-14 text-right font-bold text-orange-600">
+                            <div className="text-right font-black text-orange-600 text-xs">
                                 {Number.isInteger(item.qty) ? item.qty : item.qty.toFixed(3)}
                             </div>
-                            <div className="w-14 text-right font-bold text-slate-900 bg-green-50 px-1 rounded">
+                            <div className="hidden md:block text-right font-bold text-slate-900 bg-green-50 px-1 rounded">
                                 {(item.subtotal || 0).toFixed(2)}
                             </div>
-                            <div className="w-10 flex justify-center">
+                            <div className="flex justify-center">
                                 <button
                                     onClick={() => onUpdateQty?.(idx, Number(prompt("Cantidad:", item.qty.toString()) || item.qty))}
                                     className="p-1 text-blue-600 hover:bg-blue-50 rounded"
