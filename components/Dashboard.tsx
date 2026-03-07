@@ -1049,7 +1049,11 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             />
             <QRModal isOpen={showQR} onClose={() => setShowQR(false)} isOwner={isOwner} userId={userId} />
             <ConfigModal isOpen={showConfig} onClose={() => setShowConfig(false)} userId={userId} cajeroNombre={cajeroNombre} isOwner={isOwner} />
-            <BuyersListModal isOpen={showBuyers} onClose={() => setShowBuyers(false)} />
+            <BuyersListModal
+                isOpen={showBuyers}
+                onClose={() => setShowBuyers(false)}
+                onAddItemsToCart={addItemsToCart}
+            />
             <ProveedoresModal isOpen={showProveedores} onClose={() => setShowProveedores(false)} inventory={inventory} />
             <ProductMasterModal isOpen={showMaster} onClose={() => setShowMaster(false)} inventory={inventory} setInventory={setInventory} isOwner={isOwner} userId={userId} />
             <ReportesModal isOpen={showReports} onClose={() => setShowReports(false)} sales={sales} compras={[]} gastos={[]} customers={customers} />

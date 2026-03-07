@@ -39,13 +39,14 @@ export function usePanicMode(panicWord: string = 'auxilio') {
             };
 
             recognitionRef.current.onend = () => {
-                // AUTO-RESTART: El pánico NUNCA deja de escuchar
-                // console.log("🎤 Panic Mic ended, restarting...");
+                // AUTO-RESTART: Comentado para evitar el pitido constante por falsos positivos
+                /*
                 try {
                     recognitionRef.current.start();
                 } catch (e) {
                     // Si ya está iniciado, ignorar
                 }
+                */
             };
 
             recognitionRef.current.onerror = (event: any) => {

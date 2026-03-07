@@ -27,8 +27,16 @@ export function useVoiceInput({ onSegmentFinal }: UseVoiceInputProps = {}) {
             recognitionRef.current.lang = 'es-PE';
 
             recognitionRef.current.onstart = () => {
-                console.log("Speech recognition started");
+                console.log("🎤 Voice Input: Micrófono activado correctamente");
                 setIsListening(true);
+            };
+
+            recognitionRef.current.onspeechstart = () => {
+                console.log("🎤 Voice Input: Detectando habla...");
+            };
+
+            recognitionRef.current.onspeechend = () => {
+                console.log("🎤 Voice Input: Fin de detección de habla");
             };
 
             recognitionRef.current.onend = () => {
@@ -67,14 +75,26 @@ export function useVoiceInput({ onSegmentFinal }: UseVoiceInputProps = {}) {
     }, []);
 
     const startListening = () => {
+        console.log("🎤 Intento de iniciar micrófono... isListening:", isListening, "Protocol:", window.location.protocol);
+
+        if (typeof window !== 'undefined' && window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+            console.warn("⚠️ Advertencia: El reconocimiento de voz suele requerir HTTPS.");
+            alert("El dictado por voz requiere una conexión segura (HTTPS).");
+        }
+
         if (recognitionRef.current && !isListening) {
             setTranscript('');
             setInterimTranscript('');
             try {
                 recognitionRef.current.start();
             } catch (e) {
-                console.error("Speech recognition error:", e);
+                console.error("❌ Error al iniciar SpeechRecognition:", e);
+                // Si falla el inicio, resetear estado
+                setIsListening(false);
             }
+        } else if (!recognitionRef.current) {
+            console.error("❌ Error: SpeechRecognition no inicializado en este navegador.");
+            alert("Tu navegador no soporta dictado por voz de forma nativa.");
         }
     };
 

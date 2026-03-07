@@ -6,42 +6,34 @@ import { useState } from "react";
 interface BuyersListModalProps {
     isOpen: boolean;
     onClose: () => void;
+    onAddItemsToCart: (items: any[]) => void;
 }
 
-// Simulando pedidos entrantes
-const MOCK_ORDERS = [
-    {
-        id: "ORD-001",
-        customerName: "María Gonzalez",
-        phone: "+51 987 654 321",
-        time: "Hace 5 min",
-        items: "Arroz Faraón (2 un), Aceite Primor (1 un)",
-        total: "S/ 38.50",
-        status: "pending",
-    },
-    {
-        id: "ORD-002",
-        customerName: "Bodega Don Pepe",
-        phone: "+51 912 345 678",
-        time: "Hace 12 min",
-        items: "Leche Gloria (1 plancha), Azúcar Rubia (5 kg)",
-        total: "S/ 115.00",
-        status: "pending",
-    },
-    {
-        id: "ORD-003",
-        customerName: "Juan Carlos Silva",
-        phone: "+51 999 888 777",
-        time: "Hace 20 min",
-        items: "Fideo Don Vittorio (3 un), Atún Florida (2 un)",
-        total: "S/ 24.20",
-        status: "completed",
-    }
-];
-
-export function BuyersListModal({ isOpen, onClose }: BuyersListModalProps) {
+export function BuyersListModal({ isOpen, onClose, onAddItemsToCart }: BuyersListModalProps) {
     const [searchQuery, setSearchQuery] = useState("");
-    const [orders, setOrders] = useState(MOCK_ORDERS);
+    // Usamos un estado inicial vacío o podrías conectar con Supabase aquí
+    const [orders, setOrders] = useState([
+        {
+            id: "ORD-001",
+            customerName: "María Gonzalez",
+            phone: "+51 987 654 321",
+            time: "Hace 5 min",
+            items: [{ name: "Arroz Faraón", qty: 2, price: 15.50 }, { name: "Aceite Primor", qty: 1, price: 7.50 }],
+            itemsText: "Arroz Faraón (2 un), Aceite Primor (1 un)",
+            total: "S/ 38.50",
+            status: "pending",
+        },
+        {
+            id: "ORD-002",
+            customerName: "Bodega Don Pepe",
+            phone: "+51 912 345 678",
+            time: "Hace 12 min",
+            items: [{ name: "Leche Gloria", qty: 24, price: 4.50 }, { name: "Azúcar Rubia", qty: 5, price: 3.50 }],
+            itemsText: "Leche Gloria (1 plancha), Azúcar Rubia (5 kg)",
+            total: "S/ 115.00",
+            status: "pending",
+        }
+    ]);
 
     if (!isOpen) return null;
 
@@ -134,7 +126,7 @@ export function BuyersListModal({ isOpen, onClose }: BuyersListModalProps) {
 
                                     <div className="bg-slate-50 p-2 rounded text-sm text-slate-700 border border-slate-100">
                                         <span className="font-semibold text-xs text-slate-500 block mb-1">DETALLE DEL PEDIDO:</span>
-                                        {order.items}
+                                        {order.itemsText}
                                     </div>
                                 </div>
 
@@ -142,7 +134,13 @@ export function BuyersListModal({ isOpen, onClose }: BuyersListModalProps) {
                                     <div className="text-xl font-black text-slate-800">{order.total}</div>
                                     {order.status === "pending" && (
                                         <button
-                                            onClick={() => markAsCompleted(order.id)}
+                                            onClick={() => {
+                                                markAsCompleted(order.id);
+                                                if (Array.isArray(order.items)) {
+                                                    onAddItemsToCart(order.items);
+                                                }
+                                                onClose();
+                                            }}
                                             className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap"
                                         >
                                             <CheckCircle className="w-4 h-4" /> Marcar Atendido
