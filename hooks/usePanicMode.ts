@@ -51,17 +51,19 @@ export function usePanicMode(panicWord: string = 'auxilio') {
 
             recognitionRef.current.onerror = (event: any) => {
                 // Ignoramos errores comunes que ensucian la consola
-                if (event.error === 'no-speech' || event.error === 'network') return;
+                if (event.error === 'no-speech') return;
 
                 console.error("🎤 Panic Mic error:", event.error);
 
-                // Si es un error de red o similar, intentar reiniciar en 1s
-                if (event.error === 'network' || event.error === 'aborted' || event.error === 'audio-capture') {
+                // RESTART SEGURO: Solo reiniciamos en caso de error de red transitorio
+                // No reiniciamos en 'audio-capture' porque significa que otra pestaña o el mic normal (useVoiceInput) lo están usando
+                if (event.error === 'network') {
+                    console.log("🎤 Panic Mic: Reintentando en 5s por error de red...");
                     setTimeout(() => {
                         try {
                             if (recognitionRef.current) recognitionRef.current.start();
                         } catch (e) { }
-                    }, 1000);
+                    }, 5000);
                 }
             };
 
