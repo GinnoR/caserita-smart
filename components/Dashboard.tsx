@@ -198,45 +198,52 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         console.log(`Processing Voice Text in ${aiMode} mode:`, text);
         setAssistantResponse(null); // Clear previous response
 
-        if (aiMode === 'asistente') {
-            await handleAssistantQuery(text.toLowerCase());
-            setIsProcessing(false);
-            return;
-        }
+        // Safety timeout: stop processing after 12 seconds no matter what
+        const safetyTimeout = setTimeout(() => {
+            if (isProcessing) {
+                console.warn("⚠️ Voice processing safety timeout reached!");
+                setIsProcessing(false);
+                isProcessingChunk.current = false;
+            }
+        }, 12000);
 
-        // --- MODO PEDIDOS (Default) ---
-        // Redirección inteligente: si parece una pregunta o comando de asistente, manejarlo como tal
-        const assistantKeywords = ['dónde', 'donde', 'ubicación', 'ubicacion', 'stock', 'cuánto', 'cuanto', 'cuánta', 'cuanta', 'cuesta', 'cambiar', 'cambia', 'pon', 'vence', 'caducidad', 'cantidad', 'existe'];
-        const isAssistantQuery = assistantKeywords.some(k => text.toLowerCase().includes(k));
-
-        if (isAssistantQuery) {
-            console.log("Redirecting to Assistant Query (Smart Detection):", text);
-            await handleAssistantQuery(text.toLowerCase());
-            setIsProcessing(false);
-            return;
-        }
-        // 1. PRIORIDAD LOCAL-FIRST: Try to recognize product locally first
-        const localResults = localParse(text, inventory);
-
-        if (localResults.length > 0) {
-            console.log("[LOCAL] Match Found:", localResults);
-            addItemsToCart(localResults);
-            localResults.forEach(i => {
-                const qtyStr = Number.isInteger(i.qty) ? i.qty : i.qty.toFixed(3);
-                if (i.targetSoles) {
-                    speak(`Agregado ${qtyStr} de ${i.name} por ${i.targetSoles} soles`);
-                } else {
-                    speak(`Agregado ${i.qty} de ${i.name}`);
-                }
-                syncInventory(i.name);
-            });
-            setIsProcessing(false);
-            return; // EXIT: We already handled the order locally
-        }
-
-        // 2. GEMINI FALLBACK: Only if local fails or is unsure
-        console.log("Sending to Gemini (Local Fallback):", text);
         try {
+            if (aiMode === 'asistente') {
+                await handleAssistantQuery(text.toLowerCase());
+                return;
+            }
+
+            // --- MODO PEDIDOS (Default) ---
+            // Redirección inteligente: si parece una pregunta o comando de asistente, manejarlo como tal
+            const assistantKeywords = ['dónde', 'donde', 'ubicación', 'ubicacion', 'stock', 'cuánto', 'cuanto', 'cuánta', 'cuanta', 'cuesta', 'cambiar', 'cambia', 'pon', 'vence', 'caducidad', 'cantidad', 'existe'];
+            const isAssistantQuery = assistantKeywords.some(k => text.toLowerCase().includes(k));
+
+            if (isAssistantQuery) {
+                console.log("Redirecting to Assistant Query (Smart Detection):", text);
+                await handleAssistantQuery(text.toLowerCase());
+                return;
+            }
+
+            // 1. PRIORIDAD LOCAL-FIRST: Try to recognize product locally first
+            const localResults = localParse(text, inventory);
+
+            if (localResults.length > 0) {
+                console.log("[LOCAL] Match Found:", localResults);
+                addItemsToCart(localResults);
+                localResults.forEach(i => {
+                    const qtyStr = Number.isInteger(i.qty) ? i.qty : i.qty.toFixed(3);
+                    if (i.targetSoles) {
+                        speak(`Agregado ${qtyStr} de ${i.name} por ${i.targetSoles} soles`);
+                    } else {
+                        speak(`Agregado ${i.qty} de ${i.name}`);
+                    }
+                    syncInventory(i.name);
+                });
+                return; // EXIT: We already handled the order locally
+            }
+
+            // 2. GEMINI FALLBACK: Only if local fails or is unsure
+            console.log("Sending to Gemini (Local Fallback):", text);
             const response = await fetch("/api/gemini", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -258,6 +265,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             console.error("Voice processing error:", e);
             speak("Error de procesamiento, reintenta");
         } finally {
+            clearTimeout(safetyTimeout);
             setIsProcessing(false);
         }
     };
