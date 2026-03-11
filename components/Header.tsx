@@ -1,5 +1,6 @@
-import { User, LogOut, ShoppingCart, Sparkles, Cloud, CloudOff, RefreshCcw } from 'lucide-react';
+import { User, LogOut, ShoppingCart, Sparkles, Cloud, CloudOff, RefreshCcw, ShieldAlert } from 'lucide-react';
 import { AIMode } from './Dashboard';
+import { PanicButton } from './PanicButton';
 
 interface HeaderProps {
     onLogout?: () => void;
@@ -8,29 +9,33 @@ interface HeaderProps {
     cajeroNombre?: string;
     isOnline?: boolean;
     isSyncing?: boolean;
+    isSirenActive?: boolean;
+    onTriggerPanic?: () => void;
 }
 
-export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombre, isOnline = true, isSyncing = false }: HeaderProps) {
+export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombre, isOnline = true, isSyncing = false, isSirenActive = false, onTriggerPanic }: HeaderProps) {
     return (
-        <header className="flex flex-col md:flex-row items-center justify-between px-6 py-3 bg-blue-900 border-b border-blue-800 shadow-md gap-4">
-            <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white tracking-wide">
-                    Caserita Inteligente V1.02.26
-                </h1>
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-blue-950/40 border border-blue-800/50">
-                    {isOnline ? (
-                        <>
-                            <Cloud className={`w-4 h-4 ${isSyncing ? 'text-blue-400 animate-pulse' : 'text-green-400'}`} />
-                            <span className="text-[10px] font-bold text-blue-200 uppercase tracking-tighter">
-                                {isSyncing ? 'Sincronizando...' : 'En Línea'}
-                            </span>
-                        </>
-                    ) : (
-                        <>
-                            <CloudOff className="w-4 h-4 text-orange-400" />
-                            <span className="text-[10px] font-bold text-orange-200 uppercase tracking-tighter">Modo Offline</span>
-                        </>
-                    )}
+        <header className="flex flex-col md:flex-row items-center justify-between px-6 py-3 bg-blue-900 border-b border-blue-800 shadow-md gap-4 relative z-50">
+            <div className="flex items-center gap-4">
+                <div className="flex flex-col">
+                    <h1 className="text-xl font-bold text-white tracking-wide flex items-center gap-2">
+                        Caserita Inteligente V1.02.26
+                    </h1>
+                    <div className="flex items-center gap-1.5 mt-1">
+                        {isOnline ? (
+                            <>
+                                <Cloud className={`w-3.5 h-3.5 ${isSyncing ? 'text-blue-400 animate-pulse' : 'text-green-400'}`} />
+                                <span className="text-[10px] font-bold text-blue-200 uppercase tracking-tighter">
+                                    {isSyncing ? 'Sincronizando...' : 'En Línea'}
+                                </span>
+                            </>
+                        ) : (
+                            <>
+                                <CloudOff className="w-3.5 h-3.5 text-orange-400" />
+                                <span className="text-[10px] font-bold text-orange-200 uppercase tracking-tighter">Offline</span>
+                            </>
+                        )}
+                    </div>
                 </div>
             </div>
 

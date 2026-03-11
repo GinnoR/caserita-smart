@@ -127,6 +127,8 @@ export function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
                 ruc: ruc.trim() || null,
                 email: email.trim().toLowerCase(),
                 telefono: whatsapp.replace(/\s/g, ''),
+                trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+                subscription_status: 'trial'
             }, { onConflict: 'cod_casero' });
 
             setSuccessMsg(`✅ ¡Bodega "${businessName}" registrada! Revisa tu correo para confirmar tu cuenta.\n\n🎁 Tu primer mes es GRATIS. A partir del 2do mes son solo S/. 20/mes.`);

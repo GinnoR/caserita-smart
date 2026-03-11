@@ -1,52 +1,63 @@
 "use client";
 
 import { X, Search, Phone, ShoppingBag, CheckCircle, Clock } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface BuyersListModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAddItemsToCart: (items: any[]) => void;
+    realtimeOrders?: any[];
 }
 
-export function BuyersListModal({ isOpen, onClose, onAddItemsToCart }: BuyersListModalProps) {
+export function BuyersListModal({ isOpen, onClose, onAddItemsToCart, realtimeOrders = [] }: BuyersListModalProps) {
     const [searchQuery, setSearchQuery] = useState("");
-    // Usamos un estado inicial vacío o podrías conectar con Supabase aquí
-    const [orders, setOrders] = useState([
-        {
-            id: "ORD-001",
-            customerName: "María Gonzalez",
-            phone: "+51 987 654 321",
-            time: "Hace 5 min",
-            items: [{ name: "Arroz Faraón", qty: 2, price: 15.50 }, { name: "Aceite Primor", qty: 1, price: 7.50 }],
-            itemsText: "Arroz Faraón (2 un), Aceite Primor (1 un)",
-            total: "S/ 38.50",
-            status: "pending",
-        },
-        {
-            id: "ORD-002",
-            customerName: "Bodega Don Pepe",
-            phone: "+51 912 345 678",
-            time: "Hace 12 min",
-            items: [{ name: "Leche Gloria", qty: 24, price: 4.50 }, { name: "Azúcar Rubia", qty: 5, price: 3.50 }],
-            itemsText: "Leche Gloria (1 plancha), Azúcar Rubia (5 kg)",
-            total: "S/ 115.00",
-            status: "pending",
+    const [orders, setOrders] = useState<any[]>([]);
+
+    // Sincronizar estado local con las props en tiempo real de Supabase
+    useEffect(() => {
+        if (realtimeOrders) {
+            setOrders(realtimeOrders);
         }
-    ]);
+    }, [realtimeOrders]);
+
+    const [isUpdating, setIsUpdating] = useState(false);
 
     if (!isOpen) return null;
 
     const filteredOrders = orders.filter(
         (o) =>
-            o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            o.phone.includes(searchQuery)
+            o.cliente_nombre?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (o.cliente_telefono && o.cliente_telefono.includes(searchQuery))
     );
 
-    const pendingCount = orders.filter((o) => o.status === "pending").length;
+    const pendingCount = orders.filter((o) => o.estado === "pendiente").length;
 
-    const markAsCompleted = (id: string) => {
-        setOrders(orders.map(o => o.id === id ? { ...o, status: "completed" } : o));
+    const markAsCompleted = async (id: string, items: any) => {
+        setIsUpdating(true);
+        try {
+            const { supabase } = await import('@/utils/supabase/client');
+            const { error } = await supabase
+                .from('pedidos_entrantes')
+                .update({ estado: 'atendido' })
+                .eq('id', id);
+
+            if (!error) {
+                // Actualización optimista
+                setOrders(orders.map(o => o.id === id ? { ...o, estado: "atendido" } : o));
+                if (Array.isArray(items)) {
+                    onAddItemsToCart(items);
+                }
+                onClose();
+            } else {
+                console.error("Error al actualizar estado:", error);
+                alert("Hubo un error al marcar el pedido como atendido.");
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setIsUpdating(false);
+        }
     };
 
     return (
@@ -99,12 +110,12 @@ export function BuyersListModal({ isOpen, onClose, onAddItemsToCart }: BuyersLis
                         filteredOrders.map((order) => (
                             <div
                                 key={order.id}
-                                className={`bg-white rounded-xl shadow-sm border p-4 flex flex-col md:flex-row gap-4 items-start md:items-center transition-all ${order.status === 'pending' ? 'border-red-200 border-l-4 border-l-red-500' : 'border-slate-200 opacity-70'}`}
+                                className={`bg-white rounded-xl shadow-sm border p-4 flex flex-col md:flex-row gap-4 items-start md:items-center transition-all ${order.estado === 'pendiente' ? 'border-red-200 border-l-4 border-l-red-500' : 'border-slate-200 opacity-70'}`}
                             >
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <h3 className="font-bold text-lg text-slate-800">{order.customerName}</h3>
-                                        {order.status === 'pending' ? (
+                                        <h3 className="font-bold text-lg text-slate-800">{order.cliente_nombre}</h3>
+                                        {order.estado === 'pendiente' ? (
                                             <span className="bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
                                                 <Clock className="w-3 h-3" /> PENDIENTE
                                             </span>
@@ -117,33 +128,36 @@ export function BuyersListModal({ isOpen, onClose, onAddItemsToCart }: BuyersLis
 
                                     <div className="flex items-center gap-2 text-sm text-slate-500 mb-2">
                                         <Phone className="w-4 h-4" />
-                                        <a href={`https://wa.me/${order.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="hover:text-green-600 hover:underline font-medium">
-                                            {order.phone}
-                                        </a>
+                                        {order.cliente_telefono ? (
+                                            <a href={`https://wa.me/${order.cliente_telefono.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="hover:text-green-600 hover:underline font-medium">
+                                                {order.cliente_telefono}
+                                            </a>
+                                        ) : (
+                                            <span className="italic text-slate-400">Sin teléfono</span>
+                                        )}
                                         <span className="text-slate-300">•</span>
-                                        <span>{order.time}</span>
+                                        <span title={new Date(order.created_at).toLocaleString()}>{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                     </div>
 
                                     <div className="bg-slate-50 p-2 rounded text-sm text-slate-700 border border-slate-100">
                                         <span className="font-semibold text-xs text-slate-500 block mb-1">DETALLE DEL PEDIDO:</span>
-                                        {order.itemsText}
+                                        {order.items && Array.isArray(order.items) ? (
+                                            order.items.map((it: any) => `${it.name || 'Prod'} (${it.qty || 1} ${it.um || 'un'})`).join(', ')
+                                        ) : 'Ver detalles en Sistema'}
                                     </div>
                                 </div>
 
                                 <div className="flex flex-row md:flex-col items-center md:items-end justify-between w-full md:w-auto gap-4">
-                                    <div className="text-xl font-black text-slate-800">{order.total}</div>
-                                    {order.status === "pending" && (
+                                    <div className="text-xl font-black text-slate-800">S/ {Number(order.total).toFixed(2)}</div>
+                                    <div className="text-xs font-semibold text-slate-500 uppercase">{order.metodo_pago}</div>
+
+                                    {order.estado === "pendiente" && (
                                         <button
-                                            onClick={() => {
-                                                markAsCompleted(order.id);
-                                                if (Array.isArray(order.items)) {
-                                                    onAddItemsToCart(order.items);
-                                                }
-                                                onClose();
-                                            }}
-                                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap"
+                                            onClick={() => markAsCompleted(order.id, order.items)}
+                                            disabled={isUpdating}
+                                            className={`${isUpdating ? 'bg-slate-400' : 'bg-green-600 hover:bg-green-700'} text-white px-4 py-2 rounded-lg font-bold text-sm shadow-sm transition-colors flex items-center gap-2 whitespace-nowrap`}
                                         >
-                                            <CheckCircle className="w-4 h-4" /> Marcar Atendido
+                                            <CheckCircle className="w-4 h-4" /> {isUpdating ? 'Guardando...' : 'Marcar Atendido'}
                                         </button>
                                     )}
                                 </div>

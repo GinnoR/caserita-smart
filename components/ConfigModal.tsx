@@ -245,20 +245,39 @@ function SecuritySettings({ isOwner }: { isOwner: boolean }) {
 function CommSettings({ isOwner }: { isOwner: boolean }) {
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <SettingSection title="Teléfonos con Salida a WhatsApp (2-3 máx)">
-                <p className="text-sm text-slate-700 mb-4">Configura los números autorizados para enviar alertas automáticas y estados financieros.</p>
+            <SettingSection title="Billeteras Digitales (Pagos)">
+                <p className="text-sm text-slate-700 mb-4">Configura tus números de Yape y Plin para que aparezcan en los pedidos de tus clientes.</p>
                 <div className="space-y-3">
-                    <InputRow placeholder="+51 999 888 777" label="📱 Admin 1 (Dueño)" defaultValue="+51 987 654 321" disabled={!isOwner} />
-                    <InputRow placeholder="+51 999 888 777" label="📱 Asistente/Cajero" disabled={!isOwner} />
-                    <InputRow placeholder="+51 999 888 777" label="📱 Seguridad local" disabled={!isOwner} />
+                    <InputRow
+                        placeholder="999 888 777"
+                        label="🍊 Número PLIN"
+                        defaultValue={typeof window !== 'undefined' ? (localStorage.getItem('caserita_plin_number') || '') : ''}
+                        disabled={!isOwner}
+                        onChange={(val: string) => isOwner && localStorage.setItem('caserita_plin_number', val)}
+                    />
+                    <InputRow
+                        placeholder="999 888 777"
+                        label="🟣 Número YAPE"
+                        defaultValue={typeof window !== 'undefined' ? (localStorage.getItem('caserita_yape_number') || '') : ''}
+                        disabled={!isOwner}
+                        onChange={(val: string) => isOwner && localStorage.setItem('caserita_yape_number', val)}
+                    />
                 </div>
             </SettingSection>
 
-            <SettingSection title="Pasarela / Link de Pago">
-                <p className="text-sm text-slate-700 mb-4">Configura el link de tu pasarela de pagos (Izipay, Niubiz, etc.) para enviarlo por WhatsApp.</p>
+            <SettingSection title="Teléfonos con Salida a WhatsApp (Alarmas)">
+                <p className="text-sm text-slate-700 mb-4">Números autorizados para recibir alertas de pánico y SOS.</p>
+                <div className="space-y-3">
+                    <InputRow placeholder="+51 999 888 777" label="📱 Admin 1 (Dueño)" defaultValue="+51 987 654 321" disabled={!isOwner} />
+                    <InputRow placeholder="+51 999 888 777" label="📱 Seguridad" disabled={!isOwner} />
+                </div>
+            </SettingSection>
+
+            <SettingSection title="Pasarela / Cuentas Bancarias">
+                <p className="text-sm text-slate-700 mb-4">Configura tu link de pago o detalles de cuenta para transferencias.</p>
                 <div className="space-y-3">
                     <div className="flex flex-col gap-1">
-                        <label className="text-sm font-semibold text-slate-800">🔗 Link de Pago con Tarjeta</label>
+                        <label className="text-sm font-semibold text-slate-800">🔗 Link de Pago (Izipay/Niubiz)</label>
                         <input
                             type="text"
                             placeholder="https://pago.pe/tu-tienda"
@@ -270,6 +289,20 @@ function CommSettings({ isOwner }: { isOwner: boolean }) {
                                 }
                             }}
                             className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-900 font-semibold disabled:bg-slate-50 disabled:text-slate-500"
+                        />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                        <label className="text-sm font-semibold text-slate-800">🏦 Datos de Cuenta para Transferencia</label>
+                        <textarea
+                            placeholder="Ej: BCP Soles: 191-xxxxxx-x-xx / CCI: 002-xxxxxxxxxxx"
+                            disabled={!isOwner}
+                            defaultValue={typeof window !== 'undefined' ? (localStorage.getItem('caserita_bank_details') || '') : ''}
+                            onChange={(e) => {
+                                if (typeof window !== 'undefined' && isOwner) {
+                                    localStorage.setItem('caserita_bank_details', e.target.value);
+                                }
+                            }}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-slate-900 font-semibold disabled:bg-slate-50 disabled:text-slate-500 min-h-[80px]"
                         />
                     </div>
                 </div>

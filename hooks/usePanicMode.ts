@@ -53,7 +53,7 @@ export function usePanicMode(panicWord: string = 'auxilio') {
                 // Ignoramos errores comunes que ensucian la consola
                 if (event.error === 'no-speech') return;
 
-                console.error("🎤 Panic Mic error:", event.error);
+                console.warn("🎤 Panic Mic warning:", event.error);
 
                 // RESTART SEGURO: Solo reiniciamos en caso de error de red transitorio
                 // No reiniciamos en 'audio-capture' porque significa que otra pestaña o el mic normal (useVoiceInput) lo están usando
@@ -79,9 +79,11 @@ export function usePanicMode(panicWord: string = 'auxilio') {
     }, [panicWord]);
 
     const triggerPanicAction = async () => {
-        console.warn("PANIC MODE TRIGGERED!");
+        console.warn("🚨 PANIC MODE TRIGGERED! 🚨");
 
-        // 1. Play Siren (Using shared utility)
+        // 1. Omitimos el alert() bloqueante nativo que detendría la aplicación
+
+        // 2. Play Siren (Using shared utility)
         const started = await playSiren(30);
         if (started) {
             setIsSirenActive(true);
@@ -92,31 +94,39 @@ export function usePanicMode(panicWord: string = 'auxilio') {
             stopSiren();
         }, 30000);
 
-        // 2. Alert
-        alert("🚨 ¡MODO PÁNICO ACTIVADO! 🚨");
-
-        // 3. Remote Log (Silent)
+        // 3. Remote Log (Silent) en Supabase -> Tabla de Alertas
         try {
-            const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            if (supabaseUrl) {
-                const { supabase } = await import('@/utils/supabase/client');
-                await supabase.from('sales').insert({
-                    items: [{
-                        type: 'PANIC_ALERT',
-                        emergency_contacts: [
-                            localStorage.getItem('caserita_emergency_1'),
-                            localStorage.getItem('caserita_emergency_2'),
-                            localStorage.getItem('caserita_emergency_police')
-                        ].filter(Boolean)
-                    }],
-                    total_amount: 0,
-                    payment_method: 'Efectivo',
-                    is_loss: true
+            // Validar conexion a Supabase
+            const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            if (!url || url === 'https://placeholder.supabase.co') {
+                console.log("🆘 Alerta Simulada Pánico (Desconectado) Mode:", localStorage.getItem('caserita_emergency_1'));
+                return;
+            }
+
+            const { supabase } = await import('@/utils/supabase/client');
+
+            // Obtener el ID del Usuario Autenticado actual
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id;
+
+            if (userId) {
+                const { error } = await supabase.from('alertas_seguridad').insert({
+                    cod_casero: userId,
+                    tipo_alerta: 'PANICO',
+                    origen: 'BotonUI', // Puede ser 'Voz' dependiendo de cómo se invocó
+                    resuelto: false
                 });
-                console.log("🆘 Alerta SOS enviada a Supabase.");
+
+                if (error) {
+                    console.error("Failed to log panic incident remotely", error.message);
+                } else {
+                    console.log("🆘 Alerta SOS enviada silenciosamente a Supabase.");
+                }
+            } else {
+                console.log("🆘 Alerta no enviada (Usuario Test/Offline)");
             }
         } catch (e) {
-            console.error("Failed to log panic incident remotely", e);
+            console.error("Exception trying to log Panic Action", e);
         }
     };
 

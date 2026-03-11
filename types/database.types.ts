@@ -21,6 +21,9 @@ export interface Database {
                     marca_producto: string | null
                     categoria: string | null
                     ubicacion: string | null
+                    um: string | null
+                    unidades_base: number | null
+                    fecha_caducidad: string | null
                     created_at: string | null
                 }
                 Insert: {
@@ -30,6 +33,9 @@ export interface Database {
                     marca_producto?: string | null
                     categoria?: string | null
                     ubicacion?: string | null
+                    um?: string | null
+                    unidades_base?: number | null
+                    fecha_caducidad?: string | null
                     created_at?: string | null
                 }
                 Update: {
@@ -39,6 +45,9 @@ export interface Database {
                     marca_producto?: string | null
                     categoria?: string | null
                     ubicacion?: string | null
+                    um?: string | null
+                    unidades_base?: number | null
+                    fecha_caducidad?: string | null
                     created_at?: string | null
                 }
             }
@@ -150,6 +159,12 @@ export interface Database {
                     distrito: string | null
                     telefono: string | null
                     panic_word: string | null
+                    trial_ends_at: string | null
+                    access_key: string | null
+                    subscription_status: string | null
+                    yape_number: string | null
+                    plin_number: string | null
+                    bank_account_details: string | null
                     created_at: string | null
                 }
                 Insert: {
@@ -159,12 +174,21 @@ export interface Database {
                     distrito?: string | null
                     telefono?: string | null
                     panic_word?: string | null
+                    trial_ends_at?: string | null
+                    access_key?: string | null
+                    subscription_status?: string | null
+                    yape_number?: string | null
+                    plin_number?: string | null
+                    bank_account_details?: string | null
                 }
                 Update: {
                     tipo_casero?: string
                     nombre_vendedor?: string | null
                     district?: string | null
                     panic_word?: string | null
+                    trial_ends_at?: string | null
+                    access_key?: string | null
+                    subscription_status?: string | null
                 }
             }
         }

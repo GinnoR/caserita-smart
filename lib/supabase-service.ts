@@ -490,6 +490,38 @@ export const supabaseService = {
             return null;
         }
     },
+
+    async getMerchantInfo(codCasero: string): Promise<any> {
+        if (!isSupabaseConfigured()) return null;
+        try {
+            const { data, error } = await supabase
+                .from('cliente_casero')
+                .select('*')
+                .eq('cod_casero', codCasero)
+                .maybeSingle(); // Usar maybeSingle por si no existe aún
+            if (error) return null;
+            return data;
+        } catch { return null; }
+    },
+
+    async activateMerchant(codCasero: string, key: string): Promise<boolean> {
+        if (!isSupabaseConfigured()) return false;
+        try {
+            // Validación simple de llave (puedes expandir esto luego con una tabla de llaves)
+            if (!key || key.length < 4) return false;
+
+            const { error } = await supabase
+                .from('cliente_casero')
+                .update({
+                    subscription_status: 'active',
+                    access_key: key
+                })
+                .eq('cod_casero', codCasero);
+
+            if (error) console.error('[Supabase] Error activating merchant:', error.message);
+            return !error;
+        } catch { return false; }
+    },
 };
 
 // ============================================================

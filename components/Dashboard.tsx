@@ -7,7 +7,7 @@ import { OrderPanel } from "@/components/OrderPanel";
 import { InventoryPanel } from "@/components/InventoryPanel";
 import { ActionPanel } from "@/components/ActionPanel";
 import { PaymentMethods } from "@/components/PaymentMethods";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Store } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { FiadosModal } from "@/components/FiadosModal";
 import { QRModal } from "@/components/QRModal";
@@ -16,6 +16,8 @@ import { BuyersListModal } from "@/components/BuyersListModal";
 import { ProveedoresModal } from "@/components/ProveedoresModal";
 import { ProductMasterModal } from "@/components/ProductMasterModal";
 import { ReportesModal } from "@/components/ReportesModal";
+import { FastScannerModal } from "@/components/FastScannerModal";
+import { LiveMonitorModal } from "@/components/LiveMonitorModal";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { usePanicMode } from "@/hooks/usePanicMode";
 import { useExportReport } from "@/hooks/useExportReport";
@@ -39,6 +41,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const [cart, setCart] = useState<CartItem[]>([]);
     const [sales, setSales] = useState<Sale[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
+    const [pendingOrders, setPendingOrders] = useState<any[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [showFiados, setShowFiados] = useState(false);
     const [showQR, setShowQR] = useState(false);
@@ -47,6 +50,8 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const [showProveedores, setShowProveedores] = useState(false);
     const [showMaster, setShowMaster] = useState(false);
     const [showReports, setShowReports] = useState(false);
+    const [showScanner, setShowScanner] = useState(false);
+    const [showLiveMonitor, setShowLiveMonitor] = useState(false);
     const [dailySummary, setDailySummary] = useState<DailySummary>({
         efectivo: 0,
         yape: 0,
@@ -65,6 +70,12 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     } | null>(null);
     const [assistantResponse, setAssistantResponse] = useState<string | null>(null);
     const { triggerPanicAction, isSirenActive, stopSiren: stopPanicSiren } = usePanicMode('auxilio');
+
+    // MODO DEMO / SUBSCRIPCIÓN
+    const [subStatus, setSubStatus] = useState<'trial' | 'active' | 'expired'>('trial');
+    const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null);
+    const [activationKey, setActivationKey] = useState("");
+    const [isActivating, setIsActivating] = useState(false);
 
     const { exportToXLSX } = useExportReport();
 
@@ -132,15 +143,23 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         setCart((prev) => {
             let updated = [...prev];
             newItems.forEach((newItem) => {
-                const existingIndex = updated.findIndex(i => (i.name === newItem.name || i.code === newItem.code) && i.um === newItem.um);
+                // Find matching product in catalog to determine correct price
+                const invItem = inventory.find(i => i.id === newItem.code || i.code === newItem.code || i.name === newItem.name);
+                const price = newItem.price || invItem?.price || 0;
+
+                // Group by Name OR Code AND Unit of Measure AND Price
+                const existingIndex = updated.findIndex(i =>
+                    (i.name === newItem.name || i.code === newItem.code) &&
+                    i.um === (newItem.um || invItem?.um || "und") &&
+                    i.price === price
+                );
+
                 if (existingIndex > -1) {
                     const existing = { ...updated[existingIndex] };
                     existing.qty += newItem.qty;
                     existing.subtotal = existing.qty * existing.price;
                     updated[existingIndex] = existing;
                 } else {
-                    const invItem = inventory.find(i => i.id === newItem.code || i.code === newItem.code || i.name === newItem.name);
-                    const price = newItem.price || invItem?.price || 0;
                     updated.push({
                         code: invItem?.code || newItem.code || "???",
                         name: newItem.name,
@@ -683,7 +702,14 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         const loadData = async () => {
             console.log("🛠️ Dashboard: Cargando datos para usuario:", userId);
 
-            // 🚀 MODO DEMO AHORA CARGA LOS 100 PRODUCTOS DE LA BASE DE DATOS
+            // Validar suscripción/modo demo
+            if (userId) {
+                const info = await supabaseService.getMerchantInfo(userId);
+                if (info) {
+                    setSubStatus(info.subscription_status || 'trial');
+                    setTrialEndsAt(info.trial_ends_at);
+                }
+            }
 
             try {
                 // Asegurar perfil del casero en la BD (Solo si es UUID válido, no demo strings)
@@ -778,6 +804,56 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             return () => clearTimeout(timer);
         }
     }, [isOnline, userId]);
+
+    // --- 4. LOGICA DE ESCUCHA DE PEDIDOS EN TIEMPO REAL ---
+    useEffect(() => {
+        if (!userId) return;
+
+        // Cargar pedidos pendientes iniciales
+        const fetchInitialOrders = async () => {
+            const { supabase } = await import('@/utils/supabase/client');
+            const { data, error } = await supabase
+                .from('pedidos_entrantes')
+                .select('*')
+                .eq('cod_casero', userId)
+                .in('estado', ['pendiente', 'atendido']) // Mostrar recientes aunque estén atendidos para historial
+                .order('created_at', { ascending: false })
+                .limit(20);
+
+            if (!error && data) {
+                setPendingOrders(data);
+            }
+        };
+
+        fetchInitialOrders();
+
+        // Suscribirse a cambios en vivo
+        let channel: any;
+        const setupRealtime = async () => {
+            const { supabase } = await import('@/utils/supabase/client');
+            channel = supabase.channel('realtime_pedidos')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'pedidos_entrantes', filter: `cod_casero=eq.${userId}` },
+                    (payload) => {
+                        console.log('🔔 Nuevo evento de pedido:', payload);
+                        if (payload.eventType === 'INSERT') {
+                            setPendingOrders(prev => [payload.new, ...prev]);
+                            speak(`¡Atención! Tienes un nuevo pedido de ${payload.new.cliente_nombre}`);
+                        } else if (payload.eventType === 'UPDATE') {
+                            setPendingOrders(prev => prev.map(o => o.id === payload.new.id ? payload.new : o));
+                        }
+                    }
+                )
+                .subscribe();
+        };
+
+        setupRealtime();
+
+        return () => {
+            if (channel) channel.unsubscribe();
+        };
+    }, [userId, speak]);
 
     const removeFromCart = (index: number) => {
         setCart(prev => prev.filter((_, i) => i !== index));
@@ -903,10 +979,60 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         window.addEventListener('resize', check);
         return () => window.removeEventListener('resize', check);
     }, []);
+    const isTrialExpired = subStatus === 'trial' && trialEndsAt && new Date(trialEndsAt) < new Date();
+
+    const handleActivate = async () => {
+        if (!activationKey || !userId) return;
+        setIsActivating(true);
+        const success = await supabaseService.activateMerchant(userId, activationKey);
+        if (success) {
+            setSubStatus('active');
+            speak("¡Cuenta activada con éxito! Gracias por confiar en Caserita Smart.");
+        } else {
+            speak("Esa llave no es válida. Contacta con soporte.");
+        }
+        setIsActivating(false);
+    };
+
+    if (isTrialExpired) {
+        return (
+            <div className="fixed inset-0 z-[9999] bg-slate-900 flex items-center justify-center p-6 text-center">
+                <div className="bg-white rounded-[3rem] p-8 max-w-sm w-full shadow-2xl border-4 border-emerald-500 animate-in zoom-in duration-300">
+                    <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6 text-emerald-600">
+                        <Store className="w-10 h-10" />
+                    </div>
+                    <h2 className="text-3xl font-black text-slate-900 mb-2">Modo Demo Finalizado</h2>
+                    <p className="text-slate-600 font-medium mb-8">Tu mes gratuito ha terminado. Para seguir usando Caserita Smart, ingresa tu código de activación.</p>
+
+                    <div className="space-y-4">
+                        <input
+                            type="text"
+                            value={activationKey}
+                            onChange={(e) => setActivationKey(e.target.value.toUpperCase())}
+                            placeholder="CÓDIGO DE ACTIVACIÓN"
+                            className="w-full px-6 py-4 bg-slate-100 border-2 border-slate-200 rounded-2xl text-center font-black text-xl tracking-[0.2em] focus:border-emerald-500 outline-none"
+                        />
+                        <button
+                            onClick={handleActivate}
+                            disabled={isActivating || activationKey.length < 4}
+                            className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white font-black py-5 rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all text-xl"
+                        >
+                            {isActivating ? "Verificando..." : "ACTIVAR AHORA 🚀"}
+                        </button>
+                    </div>
+
+                    <a href="https://wa.me/51977810834?text=Hola%2C%20se%20venci%C3%B3%20mi%20demo%20de%20Caserita%20Smart.%20%C2%BFC%C3%B3mo%20obtengo%20mi%20llave%3F"
+                        target="_blank" className="block mt-8 text-emerald-600 font-black text-sm underline">
+                        Solicitar mi llave por WhatsApp
+                    </a>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <main style={isMobile ? { minHeight: '100dvh', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-col h-screen overflow-hidden bg-slate-200'}>
-            <Header onLogout={onLogout} aiMode={aiMode} onModeChange={setAiMode} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} />
+            <Header onLogout={onLogout} aiMode={aiMode} onModeChange={setAiMode} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} />
 
             {/* Asistente Toast (si hay mensaje) */}
             {aiMode === 'asistente' && assistantResponse && (
@@ -949,6 +1075,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         <ActionPanel
                             isListening={isListening}
                             isProcessing={isProcessing}
+                            pendingOrdersCount={pendingOrders.filter(o => o.estado === 'pendiente').length}
                             onToggleListening={() => {
                                 setPendingCatalogAction(null); // Reset SIEMPRE al tocar el micro
                                 setAssistantResponse(null);
@@ -962,12 +1089,14 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                 }
                             }}
                             onOpenConfig={() => setShowConfig(true)}
+                            onOpenScanner={() => setShowScanner(true)}
                             onOpenMaster={() => setShowMaster(true)}
                             onOpenFiados={() => setShowFiados(true)}
                             onExport={() => setShowReports(true)}
                             onOpenQR={() => setShowQR(true)}
                             onOpenBuyers={() => setShowBuyers(true)}
                             onOpenProveedores={() => setShowProveedores(true)}
+                            onOpenLiveMonitor={() => setShowLiveMonitor(true)}
                             onPanic={triggerPanicAction}
                             onOpenWhatsApp={() => { const message = encodeURIComponent("📢 *Caserita Smart* trae ofertas hoy:\n\n" + inventory.slice(0, 5).map(i => `✅ ${i.name} a S/ ${i.price.toFixed(2)}`).join("\n")); window.open(`https://wa.me/?text=${message}`, "_blank"); }}
                         />
@@ -1027,6 +1156,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                             <ActionPanel
                                 isListening={isListening}
                                 isProcessing={isProcessing}
+                                pendingOrdersCount={pendingOrders.filter(o => o.estado === 'pendiente').length}
                                 onToggleListening={() => {
                                     setPendingCatalogAction(null); // Reset SIEMPRE al tocar el micro
                                     setAssistantResponse(null);
@@ -1040,12 +1170,14 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                     }
                                 }}
                                 onOpenConfig={() => setShowConfig(true)}
+                                onOpenScanner={() => setShowScanner(true)}
                                 onOpenMaster={() => setShowMaster(true)}
                                 onOpenFiados={() => setShowFiados(true)}
                                 onExport={() => setShowReports(true)}
                                 onOpenQR={() => setShowQR(true)}
                                 onOpenBuyers={() => setShowBuyers(true)}
                                 onOpenProveedores={() => setShowProveedores(true)}
+                                onOpenLiveMonitor={() => setShowLiveMonitor(true)}
                                 onPanic={triggerPanicAction}
                                 onOpenWhatsApp={() => { const message = encodeURIComponent("📢 *Caserita Smart* trae ofertas hoy:\n\n" + inventory.slice(0, 5).map(i => `✅ ${i.name} a S/ ${i.price.toFixed(2)}`).join("\n")); window.open(`https://wa.me/?text=${message}`, "_blank"); }}
                             />
@@ -1095,10 +1227,13 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 isOpen={showBuyers}
                 onClose={() => setShowBuyers(false)}
                 onAddItemsToCart={addItemsToCart}
+                realtimeOrders={pendingOrders}
             />
             <ProveedoresModal isOpen={showProveedores} onClose={() => setShowProveedores(false)} inventory={inventory} />
             <ProductMasterModal isOpen={showMaster} onClose={() => setShowMaster(false)} inventory={inventory} setInventory={setInventory} isOwner={isOwner} userId={userId} />
+            <FastScannerModal isOpen={showScanner} onClose={() => setShowScanner(false)} inventory={inventory} setInventory={setInventory} onAddToCart={addItemsToCart} userId={userId} cajeroNombre={cajeroNombre} />
             <ReportesModal isOpen={showReports} onClose={() => setShowReports(false)} sales={sales} compras={[]} gastos={[]} customers={customers} />
+            <LiveMonitorModal isOpen={showLiveMonitor} onClose={() => setShowLiveMonitor(false)} userId={userId || ""} />
         </main >
     );
 }

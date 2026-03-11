@@ -1,0 +1,9 @@
+﻿ssh : kex_exchange_identification: read: Connection reset
+En línea: 1 Carácter: 1
++ ssh -o StrictHostKeyChecking=no -R 80:localhost:3000 nokey@localhost. ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo              : NotSpe    cified: (kex_exc    hange_id...onnec    tion 
+reset:Strin    g) [], RemoteExc    eption
+    + FullyQualified    ErrorId : Native    CommandError
+ 
+Connection reset by 54.82.85.249 port 22

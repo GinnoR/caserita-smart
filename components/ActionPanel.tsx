@@ -14,10 +14,12 @@ import {
     QrCode,
     MessageCircle,
     Settings,
+    Store, // Added Store here
     ShoppingBag,
     Truck,
     PieChart,
     Database,
+    Eye,
 } from "lucide-react";
 
 interface ActionPanelProps {
@@ -25,14 +27,17 @@ interface ActionPanelProps {
     isProcessing?: boolean;
     onToggleListening?: () => void;
     onOpenConfig?: () => void;
-    onOpenFiados?: () => void;
-    onExport?: () => void;
-    onOpenQR?: () => void;
-    onOpenWhatsApp?: () => void;
-    onOpenBuyers?: () => void;
-    onOpenProveedores?: () => void;
+    onOpenFiados: () => void;
+    onExport: () => void;
+    onOpenQR: () => void;
+    onOpenWhatsApp: () => void;
+    onOpenBuyers: () => void;
+    onOpenProveedores: () => void;
     onOpenMaster?: () => void;
-    onPanic?: () => void;
+    onOpenScanner?: () => void;
+    onOpenLiveMonitor?: () => void;
+    onPanic: () => void;
+    pendingOrdersCount?: number;
 }
 
 export function ActionPanel({
@@ -47,7 +52,10 @@ export function ActionPanel({
     onOpenBuyers,
     onOpenProveedores,
     onOpenMaster,
+    onOpenScanner,
+    onOpenLiveMonitor,
     onPanic,
+    pendingOrdersCount = 0,
 }: ActionPanelProps) {
     const [mounted, setMounted] = useState(false);
 
@@ -112,23 +120,41 @@ export function ActionPanel({
                     <span className="text-white font-bold tracking-widest text-xs">CONFIG</span>
                 </button>
                 <button
+                    onClick={onOpenScanner}
+                    className="flex-1 py-2 bg-blue-800 hover:bg-blue-700 active:bg-blue-600 rounded-xl shadow-md border border-blue-500 transition-colors flex items-center justify-center gap-2"
+                    title="Caja Rápida (Escáner)"
+                >
+                    <QrCode className="w-4 h-4 text-white" />
+                    <span className="text-white font-bold tracking-widest text-xs">SCAN</span>
+                </button>
+                <button
                     onClick={onOpenMaster}
                     className="flex-1 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-xl shadow-md border border-slate-600 transition-colors flex items-center justify-center gap-2"
                     title="Maestro de Productos"
                 >
                     <Database className="w-4 h-4 text-green-400" />
-                    <span className="text-white font-bold tracking-widest text-xs">CATÁLOGO</span>
+                    <span className="text-white font-bold tracking-widest text-xs">CATÁL</span>
                 </button>
             </div>
 
-            {/* ALERTA PEDIDOS ENTRANTES */}
+            {/* DESTACADO: Botón de Pedidos Entrantes */}
             <button
                 onClick={onOpenBuyers}
-                className="w-full py-3 bg-red-600 hover:bg-red-700 active:bg-red-800 rounded-xl shadow-lg border-2 border-red-400 transition-colors flex items-center justify-center gap-2 mb-2 animate-pulse relative overflow-hidden"
+                className="bg-gradient-to-tr from-amber-600 to-orange-400 text-white rounded-2xl p-4 sm:p-5 flex flex-col items-center justify-center gap-3 w-full shadow-lg border-2 border-orange-300 transition-all hover:-translate-y-1 hover:shadow-orange-500/30 col-span-2 relative drop-shadow-[0_0_15px_rgba(251,146,60,0.4)]"
             >
-                <div className="absolute inset-0 bg-white/20 animate-ping opacity-20 rounded-xl"></div>
-                <ShoppingBag className="w-6 h-6 text-white drop-shadow-md" />
-                <span className="text-white font-black tracking-widest drop-shadow-md">PEDIDOS (2)</span>
+                {/* Ping Animation para el badge (solo si hay pedidos) */}
+                {pendingOrdersCount > 0 && (
+                    <div className="absolute -top-3 -right-3">
+                        <span className="relative flex h-8 w-8">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-8 w-8 bg-red-500 items-center justify-center font-bold text-sm shadow animate-bounce border-2 border-white">{pendingOrdersCount}</span>
+                        </span>
+                    </div>
+                )}
+                <div className="bg-white/20 p-4 rounded-full backdrop-blur-sm border border-white/30">
+                    <Store className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-md" />
+                </div>
+                <span className="text-white font-black tracking-widest drop-shadow-md">PEDIDOS</span>
             </button>
 
             {/* Secondary Actions Grid */}
@@ -140,7 +166,13 @@ export function ActionPanel({
                 <ActionButton
                     icon={BarChart}
                     label="Report. y Sugerencias"
-                    onClick={onExport} // Este onClick se mantendrá pero Dashboard lo mapeará al Modal
+                    onClick={onExport}
+                />
+                <ActionButton
+                    icon={Eye}
+                    label="Monitor en Vivo (LIVE)"
+                    onClick={onOpenLiveMonitor}
+                    className="border-orange-500/50 bg-orange-950/20"
                 />
             </div>
 
@@ -181,15 +213,20 @@ function ActionButton({
     icon: Icon,
     label,
     onClick,
+    className,
 }: {
     icon: any;
     label: string;
     onClick?: () => void;
+    className?: string;
 }) {
     return (
         <button
             onClick={onClick}
-            className="flex items-center gap-3 px-3 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg border border-slate-700 shadow transition-colors group text-left"
+            className={cn(
+                "flex items-center gap-3 px-3 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-600 rounded-lg border border-slate-700 shadow transition-colors group text-left",
+                className
+            )}
         >
             <Icon className="w-4 h-4 text-white/90 group-hover:text-white flex-shrink-0" />
             <span className="text-white/90 font-medium text-xs leading-tight group-hover:text-white">
