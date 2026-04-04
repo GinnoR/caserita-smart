@@ -224,16 +224,28 @@ function SecuritySettings({ isOwner }: { isOwner: boolean }) {
                 </div>
             </SettingSection>
 
-            <SettingSection title="Activadores Rápidos">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                        <label className="text-sm font-bold text-slate-800">Palabras Clave de Auxilio</label>
-                        <InputRow
-                            placeholder="Ej: auxilio"
-                            defaultValue={typeof window !== 'undefined' ? (localStorage.getItem('caserita_panic_word') || 'auxilio') : 'auxilio'}
-                            label=""
+            <SettingSection title="Optimización de IA (Ahorro de Facturación)">
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-200">
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <h4 className="font-bold text-blue-900">Modo Ahorro de Tokens</h4>
+                            <p className="text-xs text-blue-700">
+                                Filtra el catálogo antes de enviarlo a Gemini y usa caché local.
+                                <strong> Recomendado para ahorrar costos.</strong>
+                            </p>
+                        </div>
+                        <input
+                            type="checkbox"
+                            className="w-6 h-6 rounded-md cursor-pointer accent-blue-600"
+                            defaultChecked={typeof window !== 'undefined' ? (localStorage.getItem('caserita_token_savings') !== 'false') : true}
+                            onChange={(e) => {
+                                if (isOwner) {
+                                    localStorage.setItem('caserita_token_savings', e.target.value === 'true' ? 'false' : 'true');
+                                    // Hack simple because checkbox doesn't send boolean in this row
+                                    localStorage.setItem('caserita_token_savings', e.target.checked.toString());
+                                }
+                            }}
                             disabled={!isOwner}
-                            onChange={(val: string) => isOwner && localStorage.setItem('caserita_panic_word', val)}
                         />
                     </div>
                 </div>

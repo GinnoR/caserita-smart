@@ -1,0 +1,57 @@
+BRANCH:
+* main
+
+
+REMOTE:
+origin	https://github.com/GinnoR/caserita-smart.git (fetch)
+origin	https://github.com/GinnoR/caserita-smart.git (push)
+
+
+STATUS:
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   app/layout.tsx
+	modified:   components/ActionPanel.tsx
+	modified:   components/ConfigModal.tsx
+	modified:   components/Dashboard.tsx
+	modified:   components/FastScannerModal.tsx
+	modified:   components/Header.tsx
+	modified:   components/InventoryPanel.tsx
+	modified:   components/MobileClientPortal.tsx
+	modified:   components/OrderPanel.tsx
+	modified:   components/PaymentMethods.tsx
+	modified:   components/ProductMasterModal.tsx
+	modified:   package-lock.json
+	modified:   package.json
+	modified:   tunnel_url.txt
+	modified:   utils/matching.ts
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	"Mejoras de Fluidez y Modo Fast en M\303\263vil.txt"
+	Problemas con caserita Parte 1 .docx
+	REPARAR_RLS_COMPLETO.sql
+	app/catalogo-pro/
+	app/debug/
+	branch.txt
+	check_columns.js
+	db_columns.log
+	db_error.log
+	db_output.log
+	gitDiag.js
+	git_diagnosis.log
+	git_remote.txt
+	git_status.txt
+	ip_confirmada.txt
+	lib/format-utils.ts
+	list_products.js
+	query_last_movement.js
+	remote_utf8.txt
+	remotes.txt
+	temp_ip.txt
+
+no changes added to commit (use "git add" and/or "git commit -a")

@@ -6,28 +6,28 @@ interface PaymentMethodsProps {
 
 export function PaymentMethods({ onPayment }: PaymentMethodsProps) {
     return (
-        <div className="grid grid-cols-4 gap-2 h-24">
+        <div className="grid grid-cols-4 gap-1.5 h-16">
             <PaymentButton
                 icon={Banknote}
-                label="Efectivo"
+                label="EFECTIVO"
                 color="bg-gradient-to-b from-green-500 to-green-700 hover:from-green-400 hover:to-green-600 border-green-800"
                 onClick={() => onPayment?.("Efectivo")}
             />
             <PaymentButton
                 icon={Smartphone}
-                label="Yape / Plin"
+                label="YAPE / PLIN"
                 color="bg-gradient-to-b from-purple-500 to-purple-700 hover:from-purple-400 hover:to-purple-600 border-purple-800"
                 onClick={() => onPayment?.("Yape")}
             />
             <PaymentButton
                 icon={CreditCard}
-                label="Tarjeta Crédito"
+                label="TARJETA"
                 color="bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600 border-blue-800"
                 onClick={() => onPayment?.("Tarjeta")}
             />
             <PaymentButton
                 icon={CheckSquare}
-                label="A Crédito"
+                label="CRÉDITO"
                 color="bg-gradient-to-b from-orange-500 to-orange-700 hover:from-orange-400 hover:to-orange-600 border-orange-800"
                 onClick={() => onPayment?.("Crédito")}
             />
@@ -49,10 +49,10 @@ function PaymentButton({
     return (
         <button
             onClick={onClick}
-            className={`flex flex-col items-center justify-center p-2 rounded-xl shadow-lg border-b-4 active:border-b-0 active:translate-y-1 transition-all text-white ${color}`}
+            className={`flex flex-col items-center justify-center p-1 rounded-lg shadow-md border-b-2 active:border-b-0 active:translate-y-0.5 transition-all text-white ${color}`}
         >
-            <Icon className="w-8 h-8 mb-1 drop-shadow" />
-            <span className="text-xs font-bold uppercase text-center leading-tight drop-shadow-sm">
+            <Icon className="w-5 h-5 mb-0.5 drop-shadow" />
+            <span className="text-[8px] font-black uppercase text-center leading-[1.1] drop-shadow-sm px-0.5">
                 {label}
             </span>
         </button>

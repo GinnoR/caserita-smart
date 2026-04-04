@@ -303,7 +303,14 @@ export function ProductMasterModal({ isOpen, onClose, inventory, setInventory, i
                                                     </td>
                                                     <td className="p-4 text-right font-bold text-blue-700">S/ {item.price.toFixed(2)}</td>
                                                     <td className="p-4 text-right font-medium text-slate-700 shadow-[inset_-4px_0_0_transparent] group-hover:shadow-[inset_-4px_0_0_#3b82f6] transition-shadow">
-                                                        <span className={item.stock <= 5 ? "text-red-500 font-bold" : ""}>{item.stock}</span>
+                                                        <div className="flex flex-col items-end leading-tight">
+                                                            <span className={item.stock <= (item.unidades_base > 1 ? item.unidades_base : 5) ? "text-red-500 font-bold" : ""}>
+                                                                {item.unidades_base > 1 ? (item.stock / item.unidades_base).toFixed(1) : item.stock}
+                                                            </span>
+                                                            <span className="text-[10px] text-slate-400 uppercase font-black">
+                                                                {item.unidades_base > 1 ? (item.name.match(/\(([^)]+)\)/)?.[1]?.split(' ')?.[0]?.toLowerCase() || 'unid') : (item.um === 'und' ? 'unid' : item.um)}
+                                                            </span>
+                                                        </div>
                                                     </td>
                                                     <td className="p-4 text-center">
                                                         <div className="flex justify-center gap-2">

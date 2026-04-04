@@ -245,63 +245,74 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 bg-slate-900/80 z-50 flex flex-col pt-10 px-4 items-center animate-in fade-in duration-200 backdrop-blur-sm">
-            <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
-                <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-4 text-white flex justify-between items-center shadow-md z-10">
-                    <div className="flex items-center gap-2">
-                        <Camera className="w-6 h-6" />
-                        <h2 className="text-xl font-black tracking-tight">Caja Rápida (Escáner)</h2>
+        <div className="fixed inset-0 bg-slate-900/80 z-[100] flex flex-col justify-end sm:justify-center items-center animate-in fade-in duration-300 backdrop-blur-sm">
+            {/* Background Tap to Close (Mobile) */}
+            <div className="absolute inset-0 z-0" onClick={onClose}></div>
+
+            <div className="bg-white rounded-t-[2.5rem] sm:rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col z-10 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 max-h-[92vh]">
+                {/* Pull Bar for Mobile Drawer feel */}
+                <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 sm:hidden" onClick={onClose}></div>
+
+                <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-5 text-white flex justify-between items-center shadow-md">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-2 rounded-xl">
+                            <Camera className="w-6 h-6" />
+                        </div>
+                        <h2 className="text-2xl font-black tracking-tight">Caja Rápida</h2>
                     </div>
-                    <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-full transition-colors">
-                        <X className="w-6 h-6" />
+                    <button onClick={onClose} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors active:scale-90">
+                        <X className="w-7 h-7" />
                     </button>
                 </div>
 
-                <div className="p-4 flex flex-col gap-4 bg-slate-50 relative">
+                <div className="p-6 flex flex-col gap-5 bg-slate-50 overflow-y-auto">
                     {/* Scanner Area */}
                     {isScanning ? (
-                        <div className="relative w-full rounded-xl overflow-hidden bg-black aspect-video flex items-center justify-center">
+                        <div className="relative w-full rounded-3xl overflow-hidden bg-black aspect-video flex items-center justify-center shadow-inner border-4 border-white/10">
                             <div id="reader" className="w-full h-full object-cover"></div>
                             <button
                                 onClick={stopScanner}
-                                className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-red-600/80 backdrop-blur text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg border border-white/20"
+                                className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-red-600 text-white px-8 py-3 rounded-full font-black text-sm shadow-2xl border-2 border-white/20 active:scale-95 transition-all"
                             >
-                                Detener Cámara
+                                DETENER CÁMARA
                             </button>
                         </div>
                     ) : (
                         searchStatus === "idle" && (
                             <button
                                 onClick={startScanner}
-                                className="w-full bg-blue-100 hover:bg-blue-200 border-2 border-dashed border-blue-400 py-10 rounded-xl flex flex-col items-center justify-center gap-3 transition-colors text-blue-700"
+                                className="w-full bg-blue-100 hover:bg-blue-200 border-4 border-dashed border-blue-300 py-12 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-blue-700 group"
                             >
-                                <Camera className="w-12 h-12" />
-                                <span className="font-bold text-lg">Activar Cámara</span>
+                                <div className="bg-blue-200 p-4 rounded-full group-hover:scale-110 transition-transform">
+                                    <Camera className="w-14 h-14" />
+                                </div>
+                                <span className="font-black text-xl tracking-tight">Activar Cámara</span>
                             </button>
                         )
                     )}
 
-                    {errorMsg && <div className="text-red-500 font-bold text-sm text-center bg-red-50 p-2 rounded-lg border border-red-200">{errorMsg}</div>}
+                    {errorMsg && <div className="text-red-600 font-black text-sm text-center bg-red-100 p-4 rounded-2xl border-2 border-red-200 animate-shake">{errorMsg}</div>}
 
                     {/* Manual Input Fallback */}
                     {searchStatus === "idle" && !isScanning && (
-                        <div className="flex flex-col gap-2">
+                        <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-4">
                                 <hr className="flex-1 border-slate-300" />
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">O Ingresa Manual</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">O Ingresa Manual</span>
                                 <hr className="flex-1 border-slate-300" />
                             </div>
-                            <form onSubmit={handleManualScan} className="flex gap-2">
+                            <form onSubmit={handleManualScan} className="flex gap-3">
                                 <input
                                     type="text"
+                                    inputMode="numeric"
                                     value={scannedCode}
                                     onChange={(e) => setScannedCode(e.target.value)}
                                     placeholder="Código de barras..."
-                                    className="flex-1 p-3 rounded-xl border border-slate-300 focus:border-blue-500 outline-none text-slate-900 font-mono text-center text-lg"
+                                    className="flex-1 p-5 rounded-2xl border-2 border-slate-200 focus:border-blue-500 outline-none text-slate-900 font-mono text-center text-2xl font-black bg-white shadow-sm"
                                     autoFocus
                                 />
-                                <button type="submit" className="bg-blue-600 text-white p-3 rounded-xl hover:bg-blue-700 transition">
-                                    <Search className="w-6 h-6" />
+                                <button type="submit" className="bg-blue-600 text-white p-5 rounded-2xl hover:bg-blue-700 shadow-lg active:scale-95 transition-all">
+                                    <Search className="w-8 h-8" />
                                 </button>
                             </form>
                         </div>
@@ -309,149 +320,139 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
 
                     {/* Results Area */}
                     {searchStatus === "searching" && (
-                        <div className="py-12 flex flex-col items-center gap-3 text-blue-600 animate-pulse">
-                            <Search className="w-10 h-10 animate-bounce" />
-                            <p className="font-bold">Buscando producto...</p>
+                        <div className="py-16 flex flex-col items-center gap-4 text-blue-600">
+                            <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                            <p className="font-black text-lg">Buscando producto...</p>
                         </div>
                     )}
 
                     {searchStatus === "found_local" && localMatches.length > 0 && (
-                        <div className="bg-green-50 border-2 border-green-500 rounded-xl p-5 flex flex-col items-center shadow-sm animate-in zoom-in-95">
-                            <CheckCircle className="w-12 h-12 text-green-500 mb-2" />
-                            <p className="text-green-800 font-bold mb-1 text-center">¡Producto(s) en tu Stock!</p>
+                        <div className="bg-green-50 border-4 border-green-500 rounded-[2rem] p-6 flex flex-col items-center shadow-xl animate-in zoom-in-95 duration-300">
+                            <div className="bg-green-100 p-3 rounded-full mb-3">
+                                <CheckCircle className="w-14 h-14 text-green-600" />
+                            </div>
+                            <p className="text-green-900 font-black text-xl mb-4 text-center tracking-tight">¡Encontrado en Stock!</p>
 
-                            <div className="w-full flex flex-col gap-3 mt-3">
+                            <div className="w-full flex flex-col gap-4 mt-2">
                                 {localMatches.map((match, idx) => (
-                                    <div key={match.id || idx} className="bg-white p-3 rounded-lg shadow-sm border border-green-200 flex flex-col gap-2">
+                                    <div key={match.id || idx} className="bg-white p-5 rounded-2xl shadow-md border-2 border-green-100 flex flex-col gap-3">
                                         <div className="flex justify-between items-start">
-                                            <h3 className="text-lg font-black text-slate-800 leading-tight flex-1">{match.name}</h3>
-                                            <span className="text-green-700 font-bold text-lg whitespace-nowrap ml-2">S/ {match.price.toFixed(2)}</span>
+                                            <div>
+                                                <h3 className="text-xl font-black text-slate-800 leading-none mb-1">{match.name}</h3>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{match.category}</span>
+                                            </div>
+                                            <span className="text-green-700 font-black text-2xl whitespace-nowrap ml-2">S/ {match.price.toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between text-xs text-slate-500">
-                                            <span>Stock: <strong className="text-slate-700">{match.stock} {match.um}</strong></span>
+                                        <div className="flex justify-between items-center py-2 border-y border-slate-50">
+                                            <span className="text-sm font-bold text-slate-500">Stock: 
+                                                <strong className={`ml-2 text-lg ${match.stock <= (match.unidades_base > 1 ? match.unidades_base : 5) ? 'text-red-600 font-black' : 'text-slate-900'}`}>
+                                                    {match.unidades_base > 1 
+                                                        ? `${(match.stock / match.unidades_base).toFixed(1)} ${match.name.match(/\(([^)]+)\)/)?.[1]?.split(' ')?.[0]?.toLowerCase() || 'unid'}${ (match.stock / match.unidades_base) !== 1 ? 's' : ''}`
+                                                        : `${match.stock} ${match.um === 'und' ? 'unid' : match.um}`}
+                                                </strong>
+                                            </span>
                                             {match.fecha_caducidad && (
-                                                <span className="text-orange-600 bg-orange-50 px-2 py-0.5 rounded font-bold">
+                                                <span className="text-orange-600 bg-orange-50 px-3 py-1 rounded-full font-black text-[10px] border border-orange-100 uppercase tracking-tighter">
                                                     Vence: {new Date(match.fecha_caducidad).toLocaleDateString()}
                                                 </span>
                                             )}
                                         </div>
                                         <button
-                                            onClick={() => handleQuickAddLocal(match)}
-                                            className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white font-bold text-sm py-2 rounded-lg transition-transform active:scale-95"
+                                            onClick={() => {
+                                                if (navigator.vibrate) navigator.vibrate(50);
+                                                handleQuickAddLocal(match);
+                                            }}
+                                            className="w-full mt-2 bg-green-600 hover:bg-green-700 text-white font-black text-lg py-4 rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
                                         >
-                                            Vender Este Lote (+1)
+                                            VENDER [+1] 🛒
                                         </button>
                                     </div>
                                 ))}
                             </div>
 
                             <button onClick={() => {
-                                // Forced master search if they want to add a *new* batch from scratch
                                 setLocalMatches([]);
                                 handleScanMasterForce(scannedCode);
-                            }} className="mt-4 text-xs font-bold text-green-700 underline decoration-green-400 hover:text-green-900 transition-colors">
-                                + Ingresar un nuevo Lote/Vencimiento
+                            }} className="mt-6 text-sm font-black text-green-700 underline decoration-2 decoration-green-400/50 hover:text-green-900 transition-colors uppercase tracking-widest">
+                                + Ingresar nuevo lote
                             </button>
                         </div>
                     )}
 
                     {searchStatus === "found_master" && foundProduct && (
-                        <div className="bg-indigo-50 border-2 border-indigo-400 rounded-xl p-5 flex flex-col shadow-sm animate-in slide-in-from-bottom-4">
-                            <div className="flex items-center gap-2 text-indigo-700 mb-2 justify-center">
+                        <div className="bg-indigo-50 border-4 border-indigo-400 rounded-[2rem] p-6 flex flex-col shadow-xl animate-in slide-in-from-bottom-6">
+                            <div className="flex items-center gap-3 text-indigo-700 mb-4 justify-center bg-indigo-100/50 py-2 rounded-full">
                                 <Database className="w-5 h-5" />
-                                <span className="font-bold text-xs tracking-widest uppercase">Base Global Caserita</span>
+                                <span className="font-black text-[10px] tracking-[0.2em] uppercase">Base Global Caserita</span>
                             </div>
-                            <h3 className="text-lg font-black text-slate-800 text-center mb-1 leading-tight">{foundProduct.product_name}</h3>
-                            <p className="text-xs text-slate-500 text-center mb-3">{foundProduct.brand || 'Sin marca'} • {foundProduct.category}</p>
+                            <h3 className="text-2xl font-black text-slate-900 text-center mb-1 leading-tight">{foundProduct.product_name}</h3>
+                            <p className="text-sm font-bold text-slate-500 text-center mb-6">{foundProduct.brand || 'Genérico'} • {foundProduct.category}</p>
 
-                            <div className="bg-white p-3 rounded-lg border border-indigo-100 mb-4 grid grid-cols-2 gap-3">
-                                <div className="col-span-2 sm:col-span-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Precio Venta (S/)</label>
+                            <div className="bg-white p-5 rounded-3xl border-2 border-indigo-100 mb-6 grid grid-cols-2 gap-5 shadow-inner">
+                                <div className="col-span-1">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Precio (S/)</label>
                                     <input
                                         type="number"
                                         step="0.1"
+                                        inputMode="decimal"
                                         value={newPrice}
                                         onChange={e => setNewPrice(e.target.value)}
-                                        className="w-full text-xl font-black text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-md p-1.5 text-center outline-none focus:border-indigo-500"
+                                        className="w-full text-3xl font-black text-indigo-700 bg-indigo-50 border-2 border-indigo-100 rounded-2xl p-4 text-center outline-none focus:border-indigo-500 shadow-sm"
                                         placeholder="0.00"
                                         autoFocus
                                     />
                                 </div>
-                                <div className="col-span-2 sm:col-span-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Costo Compra (S/)</label>
+                                <div className="col-span-1">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Stock</label>
                                     <input
                                         type="number"
-                                        step="0.1"
-                                        value={newCost}
-                                        onChange={e => setNewCost(e.target.value)}
-                                        className="w-full text-lg font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-md p-1.5 text-center outline-none focus:border-slate-400"
-                                        placeholder="Opcional"
-                                    />
-                                </div>
-                                <div className="col-span-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Unidad (UM)</label>
-                                    <select
-                                        value={newUm}
-                                        onChange={e => setNewUm(e.target.value)}
-                                        className="w-full text-sm font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-md p-2 outline-none focus:border-indigo-500"
-                                    >
-                                        <option value="und">UND (Unidad)</option>
-                                        <option value="Kg">Kg (Kilos)</option>
-                                        <option value="grs.">Grs (Gramos)</option>
-                                        <option value="Lt">Lt (Litros)</option>
-                                        <option value="pqte">Paquete</option>
-                                    </select>
-                                </div>
-                                <div className="col-span-1">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Stock Inicial</label>
-                                    <input
-                                        type="number"
+                                        inputMode="numeric"
                                         value={newStock}
                                         onChange={e => setNewStock(e.target.value)}
-                                        className="w-full text-base font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-md p-1.5 text-center outline-none focus:border-indigo-500"
+                                        className="w-full text-2xl font-black text-slate-800 bg-slate-50 border-2 border-slate-100 rounded-2xl p-4 text-center outline-none focus:border-indigo-400"
                                     />
                                 </div>
                                 <div className="col-span-2">
-                                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Fecha Caducidad</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2 px-1">Vencimiento</label>
                                     <input
                                         type="date"
                                         value={newExpiry}
                                         onChange={e => setNewExpiry(e.target.value)}
-                                        className="w-full text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-md p-1.5 outline-none focus:border-indigo-500"
+                                        className="w-full text-lg font-black text-slate-700 bg-white border-2 border-slate-100 rounded-2xl p-4 outline-none focus:border-indigo-500 appearance-none"
                                     />
                                 </div>
                             </div>
 
-                            <button onClick={handleSaveFromMaster} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 rounded-xl shadow-md transition-all active:scale-95 text-center">
-                                Guardar y Agregar a Venta
+                            <button onClick={handleSaveFromMaster} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-5 rounded-2xl shadow-xl shadow-indigo-500/30 transition-all active:scale-95 text-xl">
+                                GUARDAR Y VENDER 🚀
                             </button>
                         </div>
                     )}
 
                     {searchStatus === "not_found" && (
-                        <div className="bg-amber-50 border-2 border-amber-400 rounded-xl p-5 flex flex-col items-center shadow-sm text-center">
-                            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-3">
-                                <Search className="w-8 h-8 text-amber-600" />
+                        <div className="bg-amber-50 border-4 border-amber-400 rounded-[2rem] p-8 flex flex-col items-center shadow-xl text-center animate-in zoom-in-90">
+                            <div className="w-24 h-24 bg-amber-100 rounded-full flex items-center justify-center mb-5">
+                                <Search className="w-12 h-12 text-amber-600" />
                             </div>
-                            <h3 className="text-lg font-black text-amber-900 mb-2">Producto no reconocido</h3>
-                            <p className="text-amber-700 text-sm mb-4">El código <span className="font-mono font-bold bg-amber-200/50 px-1 rounded">{scannedCode}</span> no está en tu tienda ni en la base de datos Global.</p>
+                            <h3 className="text-2xl font-black text-amber-900 mb-3 tracking-tight">No reconocido</h3>
+                            <p className="text-amber-700 font-medium mb-8 leading-relaxed">
+                                El código <span className="font-mono font-black bg-white px-2 py-0.5 rounded-lg border border-amber-200">{scannedCode}</span> no está en el sistema.
+                            </p>
 
                             <button
                                 onClick={() => {
-                                    // Trigger ProductMasterModal open in parent 
                                     onClose();
-                                    // Ideally, pass the code to the parent so it opens the Add form pre-filled.
                                 }}
-                                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-md transition"
+                                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-black py-5 rounded-2xl shadow-xl shadow-amber-500/20 active:scale-95 transition-all text-lg"
                             >
-                                Registrar Nuevo Producto Manual
+                                REGISTRAR MANUAL ✍️
                             </button>
                         </div>
                     )}
 
                     {searchStatus !== "idle" && (
-                        <button onClick={resetState} className="mt-2 text-slate-500 font-bold hover:text-slate-800 text-sm py-2">
-                            Volver a Escanear
+                        <button onClick={resetState} className="mt-2 text-slate-400 font-black hover:text-slate-600 text-xs py-3 uppercase tracking-[0.2em] transition-colors">
+                            REINTENTAR ESCANEO 🔄
                         </button>
                     )}
 

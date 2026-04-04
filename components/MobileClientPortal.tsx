@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Mic, MicOff, ShoppingBag, Send, Info, Loader2, Trash2, X, CreditCard, Banknote, BookOpen, SmartphoneNfc, ArrowLeft, Search } from "lucide-react";
+import { Mic, MicOff, ShoppingBag, Send, Info, Loader2, Trash2, X, CreditCard, Banknote, BookOpen, SmartphoneNfc, ArrowLeft, Search, Box } from "lucide-react";
+import { formatStock } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
 import { seedProducts } from "@/lib/seed-data"; // Mock data
 import { useVoiceInput } from "@/hooks/useVoiceInput";
@@ -64,7 +65,7 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                     .select(`
                         id, cantidad_ingreso, p_u_venta,
                         inventario (
-                            id, cod_bar_produc, nombre_producto, um
+                            id, cod_bar_produc, nombre_producto, um, unidades_base
                         )
                     `)
                     .eq('cod_casero', uid);
@@ -84,6 +85,7 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                         name: p.nombre_producto,
                         price: 1.50, // Default price
                         um: p.um || 'und',
+                        unidades_base: p.unidades_base || 1,
                         stock: 50
                     })));
                 } else {
@@ -93,6 +95,7 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                         name: row.inventario.nombre_producto,
                         price: row.p_u_venta || 1.50,
                         um: row.inventario.um || 'und',
+                        unidades_base: row.inventario.unidades_base || 1,
                         stock: row.cantidad_ingreso || 0
                     })));
                 }
@@ -119,6 +122,7 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                     name: p.name,
                     price: p.price,
                     um: p.name.toLowerCase().includes("arroz") || p.name.toLowerCase().includes("azúcar") ? "kg" : "und",
+                    unidades_base: p.name.toLowerCase().includes("arroz") ? 50 : 1,
                     stock: 100
                 })));
                 console.error("DEBUG - Fallback activado:", errorMsg);
@@ -617,30 +621,49 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
 
     return (
         <div className="flex flex-col h-[100dvh] bg-slate-50 max-w-md mx-auto shadow-2xl relative overflow-hidden">
-            {/* Encabezado Móvil */}
-            <header className="bg-red-600 text-white p-4 shadow-md sticky top-0 z-10 flex items-center gap-3">
-                <button
-                    onClick={() => router.push('/escaneo-qr')}
-                    className="p-1.5 bg-red-700/50 hover:bg-red-700 rounded-full transition-colors flex-shrink-0"
-                    aria-label="Volver al escáner"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="flex-1">
-                    <p className="text-[10px] text-red-200 uppercase font-black tracking-widest leading-none mb-0.5">Comprando en</p>
-                    <h1 className="text-xl font-bold leading-none line-clamp-1">{businessName}</h1>
+            {/* Encabezado Móvil - COLOR DE CONTROL PARA VERIFICAR ACTUALIZACIÓN */}
+            <header className="bg-gradient-to-r from-indigo-900 via-indigo-700 to-indigo-800 text-white p-5 shadow-2xl sticky top-0 z-10 flex flex-col gap-2">
+                <div className="flex items-center gap-3 w-full">
+                    <button
+                        onClick={() => router.push('/escaneo-qr')}
+                        className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors flex-shrink-0"
+                        aria-label="Volver al escáner"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="flex-1">
+                        <p className="text-[9px] text-indigo-300 uppercase font-black tracking-widest leading-none mb-1">Caserita Smart v2.0</p>
+                        <h1 className="text-xl font-black leading-none line-clamp-1 italic">{businessName}</h1>
+                    </div>
+                    <button
+                        onClick={() => setShowCartModal(true)}
+                        className="bg-white/10 p-2.5 rounded-full relative flex-shrink-0 active:scale-90 transition-transform border border-white/10"
+                    >
+                        <ShoppingBag className="w-5 h-5 text-white" />
+                        {cart.length > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-yellow-400 text-indigo-900 text-[10px] font-black min-w-[18px] h-4.5 px-1 rounded-full flex items-center justify-center shadow-md animate-bounce">
+                                {cart.length}
+                            </span>
+                        )}
+                    </button>
                 </div>
-                <button
-                    onClick={() => setShowCartModal(true)}
-                    className="bg-white/20 p-2 rounded-full relative flex-shrink-0 active:scale-95 transition-transform"
-                >
-                    <ShoppingBag className="w-5 h-5 text-white" />
-                    {cart.length > 0 && (
-                        <span className="absolute -top-1 -right-1 bg-yellow-400 text-red-900 text-[10px] font-black min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
-                            {cart.length}
-                        </span>
-                    )}
-                </button>
+                
+                {/* BOTÓN DE DIAGNÓSTICO (Solo visible en dev para confirmar que el código cambió) */}
+                <div className="flex gap-2">
+                    <button 
+                        onClick={() => {
+                            setProducts(prev => prev.map(p => 
+                                p.name.toLowerCase().includes("arroz") || p.name.toLowerCase().includes("azúcar") 
+                                ? { ...p, unidades_base: 50, stock: 100 } 
+                                : p
+                            ));
+                            speak("Formato de sacos activado para la prueba.");
+                        }}
+                        className="flex-1 bg-white/5 border border-white/20 text-[8px] font-black py-1 px-2 rounded-lg hover:bg-white/10 active:bg-white/20"
+                    >
+                        🧪 FORZAR FORMATO SACO (PRUEBA)
+                    </button>
+                </div>
             </header>
 
             {/* Zona de Instrucciones / Promociones */}
@@ -710,21 +733,39 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                             </div>
                         ) : (
                             <div className="grid grid-cols-2 gap-3 pb-60 mt-2">
-                                {displayedProducts.map((product: any, idx: number) => (
-                                    <div key={idx} onClick={() => handleManualAdd(product)} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow active:scale-[0.98] cursor-pointer">
-                                        <div className="text-xs text-slate-400 font-medium mb-1 line-clamp-1">{product.code}</div>
-                                        <div className="font-bold text-slate-800 text-sm leading-tight mb-2 line-clamp-2">{product.name}</div>
-                                        <div className="flex justify-between items-end mt-auto">
-                                            <div className="text-red-600 font-black">S/ {product.price.toFixed(2)}</div>
-                                            <div className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">x {product.um}</div>
+                                {displayedProducts.map((product: any, idx: number) => {
+                                    const display = formatStock(product.stock, product.unidades_base, product.name, product.um);
+                                    const isLowStock = product.stock <= (product.unidades_base > 1 ? product.unidades_base : 5);
+                                    
+                                    return (
+                                        <div key={idx} onClick={() => handleManualAdd(product)} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow active:scale-[0.98] cursor-pointer relative overflow-hidden group">
+                                            <div className="text-[9px] text-slate-300 font-bold mb-1 truncate">{product.code}</div>
+                                            <div className="font-black text-slate-900 text-sm leading-tight mb-2 line-clamp-2 uppercase h-10">{product.name}</div>
+                                            
+                                            <div className="space-y-1 mb-3">
+                                                <div className="flex justify-between items-baseline">
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase">Precio</span>
+                                                    <span className="text-red-600 font-black text-base">S/ {product.price.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] text-slate-400 font-bold uppercase">Dispon.</span>
+                                                    <span className={cn(
+                                                        "text-[10px] font-black px-1.5 py-0.5 rounded-full flex items-center gap-1",
+                                                        isLowStock ? "bg-red-50 text-red-600 animate-pulse" : "bg-slate-100 text-slate-600"
+                                                    )}>
+                                                        {display.qty} {display.unit}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                className="w-full bg-slate-900 text-white py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:bg-red-600 transition-colors"
+                                            >
+                                                + SELECCIONAR
+                                            </button>
                                         </div>
-                                        <button
-                                            className="mt-3 w-full bg-slate-100 text-red-600 p-2 rounded-xl text-xs font-bold transition-colors"
-                                        >
-                                            + Seleccionar
-                                        </button>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         )}
                     </>

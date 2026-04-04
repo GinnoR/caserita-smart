@@ -93,6 +93,49 @@ export function findBestProductMatch(queryText: string, catalog: any[]) {
     return maxScore >= 8 ? bestMatch : null;
 }
 
+/**
+ * Obtiene los N productos más probables para reducir el contexto enviado a la IA.
+ */
+export function getTopProductMatches(queryText: string, catalog: any[], limit: number = 15) {
+    const criticalWords = ['con', 'sin', 'gas'];
+    const queryNormalized = queryText.toLowerCase().replace(/[?,¿!.]/g, '');
+    const queryWords = queryNormalized.split(' ')
+        .filter((w: string) => w.length >= 2 && (!STOP_WORDS.includes(w) || criticalWords.includes(w)));
+
+    if (queryWords.length === 0) return [];
+
+    const scores = catalog.map(p => {
+        const productName = p.name.toLowerCase();
+        const productNameWords = productName.split(' ').filter((w: string) => !STOP_WORDS.includes(w) || criticalWords.includes(w));
+        let score = 0;
+
+        const normalizedQueryStr = queryWords.join(' ');
+        if (productName.includes(normalizedQueryStr)) score += 20;
+
+        for (const qw of queryWords) {
+            if (productNameWords.some((pw: string) => pw === qw)) {
+                score += 10;
+                if (productNameWords[0] === qw) score += 5;
+                if (criticalWords.includes(qw)) score += 15;
+            } else if (productNameWords.some((pw: string) => pw.startsWith(qw))) {
+                score += 5;
+            }
+        }
+
+        if (queryWords.includes('con') && !productNameWords.includes('con')) score -= 30;
+        if (queryWords.includes('sin') && !productNameWords.includes('sin')) score -= 30;
+        if (queryWords.includes('gas') && !productNameWords.includes('gas')) score -= 30;
+
+        return { product: p, score };
+    });
+
+    return scores
+        .filter(s => s.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, limit)
+        .map(s => s.product);
+}
+
 export function localParse(text: string, catalog: any[]): MatchedItem[] {
     if (!text || typeof text !== "string") return [];
 

@@ -7,7 +7,7 @@ import { OrderPanel } from "@/components/OrderPanel";
 import { InventoryPanel } from "@/components/InventoryPanel";
 import { ActionPanel } from "@/components/ActionPanel";
 import { PaymentMethods } from "@/components/PaymentMethods";
-import { ShieldAlert, Store } from "lucide-react";
+import { ShieldAlert, Store, Camera, X } from "lucide-react";
 import { Footer } from "@/components/Footer";
 import { FiadosModal } from "@/components/FiadosModal";
 import { QRModal } from "@/components/QRModal";
@@ -23,7 +23,7 @@ import { usePanicMode } from "@/hooks/usePanicMode";
 import { useExportReport } from "@/hooks/useExportReport";
 import { CartItem, Sale, createSale, computeDailySummary, DailySummary } from "@/lib/sales";
 import { supabaseService } from "@/lib/supabase-service";
-import { localParse, findBestProductMatch as findBestProductMatchUnified } from "@/utils/matching";
+import { localParse, findBestProductMatch as findBestProductMatchUnified, getTopProductMatches } from "@/utils/matching";
 import { offlineService, SyncItem } from "@/lib/offline-service";
 
 export type AIMode = 'pedidos' | 'asistente';
@@ -42,6 +42,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const [sales, setSales] = useState<Sale[]>([]);
     const [customers, setCustomers] = useState<any[]>([]);
     const [pendingOrders, setPendingOrders] = useState<any[]>([]);
+    const [voiceMatches, setVoiceMatches] = useState<any[]>([]); // Para el visor de voz en tiempo real
     const [isProcessing, setIsProcessing] = useState(false);
     const [showFiados, setShowFiados] = useState(false);
     const [showQR, setShowQR] = useState(false);
@@ -261,12 +262,34 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 return; // EXIT: We already handled the order locally
             }
 
-            // 2. GEMINI FALLBACK: Only if local fails or is unsure
+            // 2. IA CACHE: Si ya procesamos exactamente esto antes, reusar
+            const cachedResponse = localStorage.getItem(`ia_cache_${text.toLowerCase().trim()}`);
+            if (cachedResponse) {
+                console.log("♻️ Usando respuesta de Caché IA");
+                const data = JSON.parse(cachedResponse);
+                handleAiResult(data);
+                return;
+            }
+
+            // 3. MODO AHORRO check
+            const isSavingsMode = typeof window !== 'undefined' && localStorage.getItem('caserita_token_savings') !== 'false';
+
+            if (isSavingsMode && text.length > 5) {
+                console.log("💰 Modo Ahorro Activo: Filtrando catálogo (RAG Light)");
+            }
+
+            // 4. GEMINI FALLBACK: Only if local fails or is unsure
             console.log("Sending to Gemini (Local Fallback):", text);
+
+            // RAG LIGHT: Si el ahorro está activo, solo enviamos los 15 productos más relevantes
+            const optimizedCatalog = isSavingsMode
+                ? getTopProductMatches(text, inventory, 18)
+                : inventory;
+
             const response = await fetch("/api/gemini", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ text, catalog: inventory }),
+                body: JSON.stringify({ text, catalog: optimizedCatalog }),
             });
 
             if (!response.ok) throw new Error("API call failed");
@@ -275,6 +298,8 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             console.log("[GEMINI] Result:", data);
 
             if ((data.found && data.found.length > 0) || (data.notFound && data.notFound.length > 0)) {
+                // Guardar en caché si tuvo éxito
+                localStorage.setItem(`ia_cache_${text.toLowerCase().trim()}`, JSON.stringify(data));
                 handleAiResult(data);
             } else if (text.length > 5) {
                 // Only speak error if the text is substantial (avoid noise feedback)
@@ -607,6 +632,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     };
 
     const handleAiResult = (data: any) => {
+        setVoiceMatches([]); // Reset matches when new result arrives
         if (data.notFound?.length > 0) {
             data.notFound.forEach((name: string) => speak(`No existe ${name}`));
         }
@@ -654,6 +680,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     } else {
                         speak(`Agregado ${qtyDesc} de ${invItem.name}`);
                     }
+                    setVoiceMatches(prev => [...prev, enrichedItem]);
                     syncInventory(invItem.name);
                 }
             });
@@ -677,7 +704,8 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 ubicacion: i.ubicacion || null,
                 fecha_caducidad: i.fecha_caducidad || null,
                 saleType: 'empacado',
-                um: i.um || 'und'
+                um: i.um || 'und',
+                unidades_base: i.unidades_base ?? 1
             })));
         }
 
@@ -737,13 +765,14 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         ubicacion: i.ubicacion || null,
                         fecha_caducidad: i.fecha_caducidad || null,
                         saleType: 'empacado',
-                        um: i.um || 'und'
+                        um: i.um || 'und',
+                        unidades_base: i.unidades_base ?? 1
                     })));
                 } else {
                     console.log("⚠️ No se encontró inventario en DB, usando DEMO");
                     // Fallback to manual demo data if DB is empty
                     setInventory([
-                        { id: 1, code: 'H1', name: 'Ejemplo: Arroz', brand: '-', category: 'Abarrotes', stock: 10, price: 3.00, um: 'kg' }
+                        { id: 1, code: 'H1', name: 'Arroz Extra (Saco 50kg)', brand: '-', category: 'Abarrotes', stock: 100, price: 180.00, um: 'kg', unidades_base: 50 }
                     ]);
                 }
 
@@ -1111,44 +1140,43 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     <div style={{ flex: 1, overflowY: 'auto', padding: '8px', paddingBottom: '72px' }}>
                         {activeTab === 'pedidos' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative' }}>
+                                {/* VISOR DE COINCIDENCIAS DE VOZ (Nuevo) */}
+                                {voiceMatches.length > 0 && (
+                                    <div className="bg-orange-50 border-2 border-orange-400 p-3 rounded-2xl shadow-lg flex flex-col gap-2 animate-in slide-in-from-top-4">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[10px] font-black text-orange-700 uppercase tracking-widest ">Encontrado por Voz:</span>
+                                            <button onClick={() => setVoiceMatches([])} className="text-orange-900 bg-orange-200 p-1 rounded-full"><X className="w-3 h-3" /></button>
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            {voiceMatches.map((m, idx) => (
+                                                <div key={idx} className="flex justify-between items-center bg-white p-2 rounded-xl shadow-sm">
+                                                    <span className="font-black text-sm text-slate-800">{m.name}</span>
+                                                    <span className="text-blue-600 font-bold text-xs">{m.qty} {m.um}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 <OrderPanel cart={cart} onRemove={removeFromCart} onUpdateQty={updateCartQty} onManualEntry={() => speak("Pedido manual iniciado")} />
 
-                                {/* BOTONES RÁPIDOS (Hablar y Pánico) en pantalla de pedidos */}
-                                <div className="fixed right-4 bottom-20 flex flex-col gap-3 z-40">
-                                    <button
-                                        onClick={triggerPanicAction}
-                                        className="bg-red-600 text-white p-4 rounded-full shadow-2xl border-4 border-white active:scale-90 transition-transform"
-                                        title="Pánico"
-                                    >
-                                        <ShieldAlert className="w-8 h-8" />
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            if (isListening) stopListening();
-                                            else startListening();
-                                        }}
-                                        className={`p-5 rounded-full shadow-2xl border-4 border-white active:scale-90 transition-all ${isListening ? 'bg-red-500 animate-pulse' : 'bg-orange-500'
-                                            }`}
-                                    >
-                                        {isListening ? (
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-2 h-2 bg-white rounded-full animate-ping" />
-                                                <span className="text-white font-bold text-xs uppercase">Parar</span>
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col items-center">
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} className="text-white">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                                </svg>
-                                                <span className="text-white font-black text-[10px] mt-0.5">DICTAR</span>
-                                            </div>
-                                        )}
-                                    </button>
+                                <div className="h-16 mb-2">
+                                    <PaymentMethods onPayment={handlePayment} />
                                 </div>
 
-                                <PaymentMethods onPayment={handlePayment} />
+                                {/* VISOR DE STOCK EN TIEMPO REAL (Solicitado v3) */}
+                                <div className="border-t-2 border-slate-300 pt-1">
+                                    <div className="h-[220px] overflow-hidden">
+                                        <InventoryPanel
+                                            inventory={inventory}
+                                            onAddToCart={addItemsToCart}
+                                            searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)}
+                                        />
+                                    </div>
+                                </div>
                             </div>
                         )}
+
                         {activeTab === 'inventario' && (
                             <InventoryPanel inventory={inventory} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
                         )}
@@ -1163,11 +1191,8 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                     if (typeof window !== "undefined" && "speechSynthesis" in window) {
                                         window.speechSynthesis.cancel();
                                     }
-                                    if (isListening) {
-                                        stopListening();
-                                    } else {
-                                        startListening();
-                                    }
+                                    if (isListening) stopListening();
+                                    else startListening();
                                 }}
                                 onOpenConfig={() => setShowConfig(true)}
                                 onOpenScanner={() => setShowScanner(true)}
@@ -1184,19 +1209,55 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         )}
                     </div>
 
-                    {/* Nav bar FIJA en la parte inferior — siempre visible */}
-                    <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: '#0f172a', borderTop: '1px solid #334155', display: 'flex', justifyContent: 'space-around', alignItems: 'center', padding: '8px 0', zIndex: 9999 }}>
-                        <button onClick={() => setActiveTab('pedidos')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: activeTab === 'pedidos' ? '#fb923c' : '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 20px' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                            <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Pedidos</span>
+                    {/* Nav bar FIJA en la parte inferior (Identica al Screenshot) */}
+                    <nav style={{
+                        position: 'fixed',
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        backgroundColor: '#0f172a',
+                        borderTop: '2px solid #334155',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        height: '75px',
+                        padding: '0 8px',
+                        zIndex: 9999
+                    }}>
+                        <button onClick={() => setActiveTab('pedidos')} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', color: activeTab === 'pedidos' ? '#f97316' : '#94a3b8', background: 'none', border: 'none' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                            <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Pedidos</span>
                         </button>
-                        <button onClick={() => setActiveTab('inventario')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: activeTab === 'inventario' ? '#fb923c' : '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 20px' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                            <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Inventario</span>
+
+                        <button onClick={() => setActiveTab('acciones')} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', color: activeTab === 'acciones' ? '#f97316' : '#94a3b8', background: 'none', border: 'none' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+                            <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Acciones</span>
                         </button>
-                        <button onClick={() => setActiveTab('acciones')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', color: activeTab === 'acciones' ? '#fb923c' : '#94a3b8', background: 'none', border: 'none', cursor: 'pointer', padding: '4px 20px' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                            <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Acciones</span>
+
+                        <button onClick={() => setActiveTab('inventario')} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', color: activeTab === 'inventario' ? '#f97316' : '#94a3b8', background: 'none', border: 'none' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                            <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Inventario</span>
+                        </button>
+
+                        <button
+                            onClick={() => { if (isListening) stopListening(); else startListening(); }}
+                            style={{
+                                flex: 1,
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '2px',
+                                background: isListening ? '#ef4444' : '#f97316',
+                                border: 'none',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                zIndex: 10000
+                            }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#ffffff" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                            <span style={{ color: '#ffffff', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Dictar</span>
                         </button>
                     </nav>
                 </>

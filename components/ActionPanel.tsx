@@ -69,15 +69,6 @@ export function ActionPanel({
 
     return (
         <div className="flex flex-col gap-2 h-full relative">
-            {/* PANIC BUTTON OVERLAY (Top Right of Speak Button) */}
-            <button
-                onClick={onPanic}
-                className="absolute -top-2 -right-2 z-10 bg-red-600 hover:bg-red-700 text-white rounded-full p-3 shadow-xl border-4 border-slate-200 active:scale-95 transition-transform"
-                title="Botón de Pánico"
-            >
-                <ShieldAlert className="w-6 h-6" />
-            </button>
-
             {/* Big Speak Button */}
             <button
                 onClick={onToggleListening}

@@ -24,8 +24,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={cn(inter.className, "bg-slate-900 text-white min-h-screen")}>
-        {children}
+      <body className={cn(inter.className, "bg-slate-900 text-white min-h-screen relative")}>
+        {/* INDICADOR GLOBAL DE ACTUALIZACIÓN - SI NO VES ESTO EN TU MÓVIL, ESTOY EDITANDO LA CARPETA EQUIVOCADA */}
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-black text-yellow-400 text-[10px] font-black text-center py-1 border-b border-yellow-400 pointer-events-none animate-pulse">
+           CONNECTED: ANTIGRAVITY EDIT MODE v2
+        </div>
+        <div className="pt-6">
+          {children}
+        </div>
       </body>
     </html>
   );

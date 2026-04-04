@@ -1,0 +1,33 @@
+Mejoras de Fluidez y "Modo Fast" en Móvil
+He optimizado la aplicación para reducir la "rigidez" en dispositivos móviles, enfocándome en el uso del Sccaner (Modo Fast) y la comodidad de navegación con una sola mano.
+
+Cambios Realizados
+1. Botones Flotantes (FAB) Globales
+Se han añadido botones de acceso rápido en las pestañas de Pedidos e Inventario:
+
+Escáner (Azul): Acceso instantáneo a la cámara desde cualquier lugar.
+Dictar (Naranja): Para pedidos por voz rápidos.
+Pánico (Rojo): Alerta inmediata siempre a mano.
+3. Inventario en Tarjetas (Full Visibilidad)
+Se eliminó la tabla rígida en celulares. Ahora el inventario usa un diseño de Tarjetas:
+
+El nombre del producto ocupa todo el ancho, con letra negrita y alto contraste.
+Los precios y el botón "Agregar" son grandes y fáciles de tocar.
+Colores vibrantes para stock bajo (Naranja) y vencidos (Rojo).
+4. Visor de Voz (Dictado Inteligente)
+Para que el dictado no sea "a ciegas", añadimos un visor en tiempo real:
+
+Al hablar, verás una pequeña tarjeta naranja sobre el carrito mostrando exactamente qué producto reconoció la IA.
+Incluye la cantidad y unidad de medida detectada.
+Puedes limpiar el visor con un toque si te equivocas.
+5. Optimización Ergonómica Final (V3)
+Botones de Pago Compactos: Se redujo la altura significativamente y se simplificaron las etiquetas a español (EFECTIVO, YAPE/PLIN, TARJETA, CRÉDITO) para liberar espacio vertical.
+Visor de Stock en Tiempo Real: Ahora, la pestaña de Pedidos incluye una lista de búsqueda de inventario justo debajo de los pagos. Así verás el stock mientras dictas sin moverte de pantalla.
+Pánico en Header: El botón de pánico se movió a la cabecera, justo al lado de "Salir", para evitar toques accidentales abajo y cumplir con la ergonomía solicitada.
+Dictado Standalone: El botón de micrófono es ahora un botón flotante (FAB) independiente, más grande y ubicado estratégicamente para uso rápido.
+Verificación Visual
+(El nuevo diseño incluye tarjetas de inventario legibles y un visor de voz naranja sobre el carrito)
+
+Siguientes Pasos
+Prueba Real: Abre la app en tu celular y toca el botón azul del escáner.
+Registro Rápido: Prueba escanear un código nuevo; verás que el formulario ahora es mucho

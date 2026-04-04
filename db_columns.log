@@ -1,0 +1,12 @@
+[
+  "id",
+  "cod_bar_produc",
+  "nombre_producto",
+  "marca_producto",
+  "categoria",
+  "created_at",
+  "ubicacion",
+  "fecha_caducidad",
+  "um",
+  "unidades_base"
+]
