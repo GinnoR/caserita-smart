@@ -1,0 +1,16 @@
+﻿[dotenv@17.3.1] injecting env (3) from .env.local -- tip: ÔÜÖ´©Å  override existing env vars with { override: true }
+=== RESUMEN DE ACTIVIDAD EN SUPABASE ===
+
+--- ├ÜLTIMAS 5 VENTAS ---
+
+--- ├ÜLTIMOS 5 PEDIDOS ENTRANTES ---
+[2026-03-28T06:19:13.50953+00:00] Test Diagnostic: S/ 10 (pendiente)
+[2026-03-11T16:28:24.174487+00:00] Cliente Web: S/ 1.5 (atendido)
+[2026-03-11T16:20:37.6153+00:00] Cliente Web: S/ 7.5 (atendido)
+[2026-03-11T16:19:08.267342+00:00] Cliente Web: S/ 4.5 (pendiente)
+[2026-03-11T16:12:00.346612+00:00] Cliente Cat├ílogo Web: S/ 3 (pendiente)
+
+--- ESTADO DE INVENTARIO ---
+Total de productos en cat├ílogo: 261
+
+========================================

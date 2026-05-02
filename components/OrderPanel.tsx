@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, Trash2, Pencil, PlusCircle } from 'lucide-react';
+import { formatStock } from "@/lib/format-utils";
 
 interface OrderPanelProps {
     cart?: any[];
@@ -49,19 +50,57 @@ export function OrderPanel({
                     (isExpanded ? cart : cart.slice(0, 3)).map((item, idx) => (
                         <div key={idx} className="flex flex-col gap-1 border-b border-slate-100 pb-2 last:border-0 relative">
                             <div className="flex justify-between items-center">
-                                <span className="font-black text-sm text-slate-800 uppercase truncate pr-4">{item.name}</span>
+                                <span className="font-black text-base text-black uppercase truncate pr-4 leading-tight">{item.name}</span>
                                 <div className="flex items-center gap-1">
-                                    <button onClick={() => onUpdateQty?.(idx, item.qty + 1)} className="p-1 text-blue-500"><Pencil className="w-3.5 h-3.5" /></button>
+                                    <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            const newQty = prompt(`Nueva cantidad para ${item.name}:`, item.qty.toString());
+                                            if (newQty !== null && !isNaN(parseFloat(newQty))) {
+                                                onUpdateQty?.(idx, parseFloat(newQty));
+                                            }
+                                        }} 
+                                        className="p-1 text-blue-500 hover:scale-110 transition-transform"
+                                    >
+                                        <Pencil className="w-4 h-4" />
+                                    </button>
                                     <button onClick={() => onRemove?.(idx)} className="p-1 text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>
                                 </div>
                             </div>
                             <div className="flex justify-between items-center px-1">
                                 <div className="flex items-center gap-2">
-                                    <span className="text-[10px] font-black text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-tighter">{item.um}</span>
-                                    <span className="text-[12px] font-bold text-slate-600">S/ {item.price.toFixed(2)}</span>
+                                    <span className="text-[11px] font-black text-slate-800 bg-slate-200 px-3 py-1 rounded-full uppercase tracking-tighter border border-slate-300">{item.um}</span>
+                                    <span className="text-[14px] font-black text-slate-900">S/ {item.price.toFixed(2)}</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <span className="text-orange-600 font-black text-base">{item.qty}</span>
+                                    <div className="flex items-center bg-slate-100 rounded-lg border border-slate-200 overflow-hidden shadow-sm">
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const current = Number(item.qty);
+                                                const step = item.um === 'kg' ? 0.1 : 1;
+                                                const newVal = Math.max(0, current - step);
+                                                onUpdateQty?.(idx, newVal);
+                                            }}
+                                            className="px-2 py-1 hover:bg-red-50 hover:text-red-600 transition-colors font-black text-slate-500 border-r border-slate-200"
+                                        >
+                                            -
+                                        </button>
+                                        <span className="w-10 text-center font-black text-orange-600 text-sm">
+                                            {Number.isInteger(item.qty) ? item.qty : item.qty.toFixed(1)}
+                                        </span>
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const current = Number(item.qty);
+                                                const step = item.um === 'kg' ? 0.1 : 1;
+                                                onUpdateQty?.(idx, current + step);
+                                            }}
+                                            className="px-2 py-1 hover:bg-green-50 hover:text-green-600 transition-colors font-black text-slate-500 border-l border-slate-200"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>

@@ -20,6 +20,7 @@ import {
     PieChart,
     Database,
     Eye,
+    Camera,
 } from "lucide-react";
 
 interface ActionPanelProps {
@@ -37,6 +38,7 @@ interface ActionPanelProps {
     onOpenScanner?: () => void;
     onOpenLiveMonitor?: () => void;
     onPanic: () => void;
+    onOpenSecurity?: () => void;
     pendingOrdersCount?: number;
 }
 
@@ -54,6 +56,7 @@ export function ActionPanel({
     onOpenMaster,
     onOpenScanner,
     onOpenLiveMonitor,
+    onOpenSecurity,
     onPanic,
     pendingOrdersCount = 0,
 }: ActionPanelProps) {
@@ -145,7 +148,10 @@ export function ActionPanel({
                 <div className="bg-white/20 p-4 rounded-full backdrop-blur-sm border border-white/30">
                     <Store className="w-10 h-10 sm:w-12 sm:h-12 text-white drop-shadow-md" />
                 </div>
-                <span className="text-white font-black tracking-widest drop-shadow-md">PEDIDOS</span>
+                <div className="flex flex-col items-center">
+                    <span className="text-white font-black tracking-widest drop-shadow-md text-center">PEDIDOS EN BUZÓN</span>
+                    <span className="text-[8px] font-black text-amber-300 mt-1 uppercase tracking-[3px]">v4.0 CONFIG-VOZ</span>
+                </div>
             </button>
 
             {/* Secondary Actions Grid */}
@@ -164,6 +170,12 @@ export function ActionPanel({
                     label="Monitor en Vivo (LIVE)"
                     onClick={onOpenLiveMonitor}
                     className="border-orange-500/50 bg-orange-950/20"
+                />
+                <ActionButton
+                    icon={Camera}
+                    label="Cámaras de Seguridad"
+                    onClick={onOpenSecurity}
+                    className="border-red-500/30 bg-red-950/10"
                 />
             </div>
 

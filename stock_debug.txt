@@ -1,0 +1,2 @@
+=== DETALLE DE STOCK ===
+Error: column inventario.stock_actual does not exist

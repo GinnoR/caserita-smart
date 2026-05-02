@@ -18,9 +18,13 @@ export function usePanicMode(panicWord: string = 'auxilio') {
                 const lastResult = event.results[event.results.length - 1];
                 const transcript = lastResult[0].transcript.toLowerCase();
 
-                // 1. Detección de Activación
-                const configuredPanicWord = typeof window !== 'undefined' ? (localStorage.getItem('caserita_panic_word') || panicWord) : panicWord;
-                if (transcript.includes(configuredPanicWord.toLowerCase())) {
+                // 1. Detección de Activación (Palabras Clave)
+                const storedTriggerPhrases = typeof window !== 'undefined' ? (localStorage.getItem('caserita_panic_trigger_phrase') || 'código rojo, atraco, me están robando') : 'código rojo, atraco, me están robando';
+                const triggerPhrases = storedTriggerPhrases.split(',').map(p => p.trim().toLowerCase()).filter(Boolean);
+                
+                const matchedTrigger = triggerPhrases.some(phrase => transcript.includes(phrase));
+
+                if (matchedTrigger || transcript.includes(panicWord.toLowerCase())) {
                     triggerPanicAction();
                 }
 

@@ -7,7 +7,8 @@ import { OrderPanel } from "@/components/OrderPanel";
 import { InventoryPanel } from "@/components/InventoryPanel";
 import { ActionPanel } from "@/components/ActionPanel";
 import { PaymentMethods } from "@/components/PaymentMethods";
-import { ShieldAlert, Store, Camera, X } from "lucide-react";
+import { ShieldAlert, Store, Camera, X, Smartphone, Search, FileText, Share2, UserCheck, Settings, QrCode, Database, MoreHorizontal, PieChart, MessageCircle, BarChart, Eye } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Footer } from "@/components/Footer";
 import { FiadosModal } from "@/components/FiadosModal";
 import { QRModal } from "@/components/QRModal";
@@ -21,6 +22,7 @@ import { LiveMonitorModal } from "@/components/LiveMonitorModal";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { usePanicMode } from "@/hooks/usePanicMode";
 import { useExportReport } from "@/hooks/useExportReport";
+import { SecurityPanel } from "@/components/SecurityPanel";
 import { CartItem, Sale, createSale, computeDailySummary, DailySummary } from "@/lib/sales";
 import { supabaseService } from "@/lib/supabase-service";
 import { localParse, findBestProductMatch as findBestProductMatchUnified, getTopProductMatches } from "@/utils/matching";
@@ -48,11 +50,16 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const [showQR, setShowQR] = useState(false);
     const [showConfig, setShowConfig] = useState(false);
     const [showBuyers, setShowBuyers] = useState(false);
+    const [showReceiptModal, setShowReceiptModal] = useState(false);
+    const [receiptType, setReceiptType] = useState<'whatsapp' | 'boleta' | 'factura'>('whatsapp');
+    const [customerTaxId, setCustomerTaxId] = useState("");
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<any>(null);
     const [showProveedores, setShowProveedores] = useState(false);
     const [showMaster, setShowMaster] = useState(false);
     const [showReports, setShowReports] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
     const [showLiveMonitor, setShowLiveMonitor] = useState(false);
+    const [showSecurityPanel, setShowSecurityPanel] = useState(false);
     const [dailySummary, setDailySummary] = useState<DailySummary>({
         efectivo: 0,
         yape: 0,
@@ -134,42 +141,115 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 const aSim = a.name.toLowerCase().includes(productName.toLowerCase()) ? 1 : 0;
                 const bSim = b.name.toLowerCase().includes(productName.toLowerCase()) ? 1 : 0;
                 if (aSim !== bSim) return bSim - aSim;
-                return b.name.localeCompare(a.name); // Alphabetical DESC as requested
+                return b.name.localeCompare(a.name);
             });
             return sorted;
         });
     };
 
+    // Validación de stock al sincronizar o cargar inventario
+    useEffect(() => {
+        if (!inventory.length || !cart.length) return;
+        
+        // Limpiar el carrito de productos que se hayan agotado en el inventario real
+        setCart(prev => {
+            const updated = prev.filter(item => {
+                const invItem = inventory.find(i => 
+                    (item.code && String(i.code) === String(item.code)) || 
+                    i.name.toLowerCase() === item.name.toLowerCase()
+                );
+                return invItem && invItem.stock > 0;
+            });
+            return updated.length !== prev.length ? updated : prev;
+        });
+    }, [inventory]); // Solo se dispara cuando el inventario cambia de verdad
+
     const addItemsToCart = (newItems: any[]) => {
         setCart((prev) => {
             let updated = [...prev];
             newItems.forEach((newItem) => {
-                // Find matching product in catalog to determine correct price
-                const invItem = inventory.find(i => i.id === newItem.code || i.code === newItem.code || i.name === newItem.name);
-                const price = newItem.price || invItem?.price || 0;
+                const invItem = inventory.find(i => 
+                    (newItem.code && (String(i.id) === String(newItem.code) || String(i.code) === String(newItem.code))) || 
+                    i.name.toLowerCase().trim() === newItem.name.toLowerCase().trim()
+                );
+                if (!invItem) return;
 
-                // Group by Name OR Code AND Unit of Measure AND Price
+                const price = newItem.price || invItem.price || 0;
+                
+                // Calcular disponibilidad real considerando lo que ya está en el carrito (excluyendo el item actual si estamos actualizando)
+                // Pero aquí estamos AGREGANDO nuevos items desde fuera
+                const inCartCurrent = updated.filter(i => String(i.code) === String(invItem.code)).reduce((sum, i) => sum + Number(i.qty), 0);
+                const available = Math.max(0, invItem.stock - inCartCurrent);
+
+                // VALIDACIÓN PARANOICA DE STOCK 0
+                if (invItem.stock <= 0 && newItem.qty > 0) {
+                    const msg = `este producto ${invItem.name} se ha agotado`;
+                    speak(msg);
+                    setAssistantResponse(msg);
+                    setTimeout(() => setAssistantResponse(null), 4000);
+                    return; // Bloqueo total
+                }
+
+                if (available <= 0 && newItem.qty > 0) {
+                    const msg = `este producto ${invItem.name} se ha agotado`;
+                    speak(msg);
+                    setAssistantResponse(msg);
+                    setTimeout(() => setAssistantResponse(null), 4000);
+                    return;
+                }
+
                 const existingIndex = updated.findIndex(i =>
-                    (i.name === newItem.name || i.code === newItem.code) &&
-                    i.um === (newItem.um || invItem?.um || "und") &&
+                    (i.name === newItem.name || String(i.code) === String(newItem.code)) &&
+                    i.um === (newItem.um || invItem.um || "und") &&
                     i.price === price
                 );
 
                 if (existingIndex > -1) {
                     const existing = { ...updated[existingIndex] };
-                    existing.qty += newItem.qty;
+                    const currentQty = Number(existing.qty) || 0;
+                    const delta = Number(newItem.qty) || 0;
+                    
+                    const newQty = Math.max(0, currentQty + delta);
+                    
+                    // Validar contra el stock total (porque currentQty ya está incluido en el stock ocupado)
+                    if (newQty > invItem.stock) {
+                        const msg = `Solo quedan ${invItem.stock} de ${existing.name}. Ajustando al máximo.`;
+                        speak(msg);
+                        setAssistantResponse(msg);
+                        setTimeout(() => setAssistantResponse(null), 4000);
+                        existing.qty = invItem.stock;
+                    } else {
+                        existing.qty = newQty;
+                    }
+
                     existing.subtotal = existing.qty * existing.price;
-                    updated[existingIndex] = existing;
-                } else {
-                    updated.push({
-                        code: invItem?.code || newItem.code || "???",
-                        name: newItem.name,
-                        qty: newItem.qty,
-                        price,
-                        um: newItem.um || invItem?.um || "und",
-                        subtotal: newItem.qty * price,
-                        targetSoles: newItem.targetSoles
-                    });
+                    
+                    if (existing.qty <= 0) {
+                        updated.splice(existingIndex, 1);
+                    } else {
+                        updated[existingIndex] = existing;
+                    }
+                } else if (newItem.qty > 0) {
+                    let finalQty = Number(newItem.qty);
+                    if (finalQty > available || available <= 0) {
+                        const msg = `este producto ${invItem.name} se ha agotado`;
+                        speak(msg);
+                        setAssistantResponse(msg);
+                        setTimeout(() => setAssistantResponse(null), 4000);
+                        finalQty = available;
+                    }
+
+                    if (finalQty > 0) {
+                        updated.push({
+                            code: invItem.code || newItem.code || "???",
+                            name: newItem.name,
+                            qty: finalQty,
+                            price,
+                            um: newItem.um || invItem.um || "und",
+                            subtotal: finalQty * price,
+                            targetSoles: newItem.targetSoles
+                        });
+                    }
                 }
             });
             return updated;
@@ -625,8 +705,36 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             return;
         }
 
+        // 7. COMANDOS DE NAVEGACIÓN ESTRUCTURAL (Solicitados v4)
+        const lowerQuery = query.toLowerCase();
+        if (lowerQuery.includes('alerta') || lowerQuery.includes('pánico') || lowerQuery.includes('panico') || lowerQuery.includes('seguridad')) {
+            setShowConfig(true);
+            speak("Abriendo Alertas y Pánico.");
+            return;
+        }
+        if (lowerQuery.includes('comunicación') || lowerQuery.includes('comunicacion') || lowerQuery.includes('whasapp') || lowerQuery.includes('wa')) {
+            const message = encodeURIComponent("📢 *Caserita Smart* trae ofertas hoy:\n\n" + inventory.slice(0, 5).map(i => `✅ ${i.name} a S/ ${i.price.toFixed(2)}`).join("\n"));
+            window.open(`https://wa.me/?text=${message}`, "_blank");
+            speak("Abriendo comunicaciones de WhatsApp.");
+            return;
+        }
+        if (lowerQuery.includes('cámara') || lowerQuery.includes('camara') || lowerQuery.includes('video') || lowerQuery.includes('ia')) {
+            setShowSecurityPanel(true);
+            speak("Activando Cámaras con Inteligencia Artificial.");
+            return;
+        }
+        if (lowerQuery.includes('ayuda') || lowerQuery.includes('tips') || lowerQuery.includes('soporte')) {
+            speak("Abriendo sección de Tips y Ayuda para tu bodega.");
+            return;
+        }
+        if (lowerQuery.includes('asistente') || lowerQuery.includes('personal') || lowerQuery.includes('colaborador')) {
+            setShowBuyers(true);
+            speak("Abriendo lista de asistentes y compradores.");
+            return;
+        }
+
         // Fallback final
-        const finalMsg = "Soy tu asistente. Pregúntame sobre precios, ubicaciones o stock. También puedo hacer cambios si eres el dueño.";
+        const finalMsg = "Soy tu asistente. Pregúntame sobre precios, stock o dile 'Ver Cámaras' o 'Alertas'.";
         setAssistantResponse(finalMsg);
         speak(finalMsg);
     };
@@ -643,7 +751,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 // Prioritized Matching:
                 // 1. Precise Match (Code or exact Name)
                 let invItem = inventory.find(i =>
-                    (item.code && (i.id === item.code || i.code === item.code)) ||
+                    (item.code && (String(i.id) === String(item.code) || String(i.code) === String(item.code))) ||
                     i.name.toLowerCase() === item.name.toLowerCase()
                 );
 
@@ -661,12 +769,49 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     return;
                 }
 
-                if (invItem.stock < item.qty) {
-                    speak(`Poca cantidad de ${invItem.name}`);
+                // Calcular disponibilidad real considerando el carrito Y lo que ya estamos agregando en este comando
+                const inCart = cart.filter(c => String(c.code) === String(invItem.code)).reduce((sum, c) => sum + Number(c.qty), 0);
+                const alreadyProcessedInThisLoop = toAdd.filter(c => String(c.code) === String(invItem.code)).reduce((sum, c) => sum + Number(c.qty), 0);
+                const available = Math.max(0, invItem.stock - (inCart + alreadyProcessedInThisLoop));
+
+                // Bloqueo absoluto si el stock es 0 o menor
+                if (invItem.stock <= 0) {
+                    const msg = `este producto ${invItem.name} se ha agotado`;
+                    speak(msg);
+                    setAssistantResponse(msg);
+                    setTimeout(() => setAssistantResponse(null), 4000);
+                    return; 
+                }
+
+                if (available <= 0) {
+                    const msg = `este producto ${invItem.name} se ha agotado`;
+                    speak(msg);
+                    setAssistantResponse(msg);
+                    setTimeout(() => setAssistantResponse(null), 4000);
+                    return; 
+                } else if (available < item.qty) {
+                    const msg = `Solo quedan ${available} de ${invItem.name}. Ajustando pedido.`;
+                    speak(msg);
+                    setAssistantResponse(msg);
+                    setTimeout(() => setAssistantResponse(null), 4000);
+                    
+                    const enrichedItem = {
+                        ...item,
+                        qty: available,
+                        name: invItem.name,
+                        code: invItem.code,
+                        price: invItem.price,
+                        um: invItem.um,
+                        targetSoles: null, // Reset target soles if qty changed
+                        subtotal: available * invItem.price
+                    };
+                    toAdd.push(enrichedItem);
+                    setVoiceMatches(prev => [...prev, enrichedItem]);
+                    syncInventory(invItem.name);
                 } else {
                     const enrichedItem = {
                         ...item,
-                        name: invItem.name, // Use canonical name
+                        name: invItem.name, 
                         code: invItem.code,
                         price: invItem.price,
                         um: invItem.um,
@@ -815,10 +960,23 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
                 for (const item of queue) {
                     try {
-                        const ventaId = await supabaseService.saveSale(item.sale);
+                        // Defensa: Asegurar que el cod_casero sea el del usuario actual autenticado
+                        // para evitar violaciones de RLS si la venta se guardó offline con un ID viejo o nulo.
+                        const safeSale = { 
+                            ...item.sale, 
+                            cod_casero: item.sale.cod_casero || userId 
+                        };
+
+                        const ventaId = await supabaseService.saveSale(safeSale);
                         if (ventaId) {
                             const detailsWithId = item.details.map(d => ({ ...d, venta_id: ventaId }));
                             await supabaseService.saveSaleDetails(detailsWithId);
+                            
+                            // 🚀 ACTUALIZAR STOCK EN SUPABASE (Añadido)
+                            if (userId) {
+                                await supabaseService.updateInventoryStock(userId, detailsWithId);
+                            }
+                            
                             offlineService.removeFromSyncQueue(item.id);
                         }
                     } catch (e) {
@@ -891,21 +1049,63 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const updateCartQty = (index: number, newQty: number) => {
         setCart(prev => {
             const updated = [...prev];
-            updated[index] = {
-                ...updated[index],
-                qty: newQty,
-                subtotal: newQty * updated[index].price
-            };
+            if (!updated[index]) return prev;
+            
+            const item = { ...updated[index] };
+            const invItem = inventory.find(i => 
+                (item.code && String(i.code) === String(item.code)) || 
+                i.name.toLowerCase() === item.name.toLowerCase()
+            );
+            
+            if (invItem) {
+                const inCartOthers = updated.filter((c, i) => i !== index && (
+                    (c.code && String(c.code) === String(invItem.code)) || 
+                    c.name.toLowerCase() === invItem.name.toLowerCase()
+                )).reduce((sum, c) => sum + Number(c.qty), 0);
+                
+                const available = Math.max(0, invItem.stock - inCartOthers);
+                
+                if (newQty > available || available <= 0) {
+                    const msg = `este producto ${item.name} se ha agotado`;
+                    speak(msg);
+                    setAssistantResponse(msg);
+                    setTimeout(() => setAssistantResponse(null), 4000);
+                    item.qty = available;
+                } else {
+                    item.qty = Math.max(0, newQty);
+                }
+            } else {
+                item.qty = Math.max(0, newQty);
+            }
+
+            item.subtotal = item.qty * item.price;
+            
+            if (item.qty <= 0) {
+                return updated.filter((_, i) => i !== index);
+            }
+            
+            updated[index] = item; // Reemplazar con la copia modificada
             return updated;
         });
     };
 
     const handlePayment = async (method: any) => {
         if (cart.length === 0) return;
+        
+        setSelectedPaymentMethod(method);
+
         if (method === "Crédito") {
             setShowFiados(true);
             return;
         }
+
+        // Abrir selector de comprobante
+        setShowReceiptModal(true);
+    };
+
+    const confirmPaymentWithReceipt = async () => {
+        const method = selectedPaymentMethod;
+        if (!method) return;
 
         if (method === "Tarjeta") {
             const cardLink = typeof window !== 'undefined' ? localStorage.getItem('caserita_card_link') : null;
@@ -924,10 +1124,36 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             }
         }
 
+        setShowReceiptModal(false);
         await processSale(method);
+
+        // Enviar comprobante por WhatsApp por defecto si hay un cliente vinculado o si es Recibo Digital
+        const total = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+        const productList = cart.map(i => `- ${i.name} (x${i.qty}): S/ ${i.subtotal?.toFixed(2)}`).join("\n");
+        const whatsappMsg = encodeURIComponent(`*🛒 COMPROBANTE CASERITA SMART*\n\nGracias por su compra.\n\n*Detalle:*\n${productList}\n\n*TOTAL: S/ ${total.toFixed(2)}*\n\nTipo: ${receiptType.toUpperCase()} ${customerTaxId ? `(${customerTaxId})` : ''}\n\n¡Vuelva pronto! 👋`);
+        
+        // Determinar teléfono (del campo de búsqueda o de la selección)
+        const match = customers.find(c => c.dni === customerTaxId || c.ruc === customerTaxId);
+        const targetPhone = match?.phone || (customerTaxId.length === 9 ? customerTaxId : "");
+        
+        if (receiptType === 'whatsapp' || targetPhone) {
+             window.open(`https://wa.me/${targetPhone.replace(/\D/g, '')}?text=${whatsappMsg}`, "_blank");
+        }
     };
 
     const processSale = async (method: any, customer?: any) => {
+        // VALIDACIÓN FINAL DE STOCK ANTES DE PROCESAR
+        for (const cartItem of cart) {
+            const invItem = inventory.find(i => String(i.code) === String(cartItem.code));
+            if (invItem && invItem.stock < cartItem.qty) {
+                const msg = `Error de Stock: ${cartItem.name} tiene solo ${invItem.stock} unidades. Por favor ajuste el pedido.`;
+                speak(msg);
+                setAssistantResponse(msg);
+                setTimeout(() => setAssistantResponse(null), 5000);
+                return; // ABORTAR VENTA
+            }
+        }
+
         const saleData = createSale(cart, method, customer?.id, customer?.fullName);
         const totals = {
             total_venta: saleData.total,
@@ -939,13 +1165,13 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
         try {
             // Actualizar stock local INMEDIATAMENTE (Optimistic UI)
-            const updatedInventory = [...inventory];
-            for (const cartItem of cart) {
-                const item = updatedInventory.find(i => i.code === cartItem.code);
-                if (item) {
-                    item.stock = Math.max(0, item.stock - cartItem.qty);
+            const updatedInventory = inventory.map(item => {
+                const cartItem = cart.find(c => c.code === item.code);
+                if (cartItem) {
+                    return { ...item, stock: Math.max(0, item.stock - cartItem.qty) };
                 }
-            }
+                return item;
+            });
             setInventory(updatedInventory);
             offlineService.saveInventory(updatedInventory); // Persistir stock localmente
 
@@ -962,13 +1188,52 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
             // Intentar guardado real
             if (isOnline) {
-                const ventaId = await supabaseService.saveSale(totals);
-                if (ventaId) {
-                    const detallesConId = detalles.map(d => ({ ...d, venta_id: ventaId }));
-                    await supabaseService.saveSaleDetails(detallesConId);
-                } else {
-                    // Falló Supabase pero hay internet? (Quizás error de server) -> Cachear de todas formas
+                try {
+                    const ventaId = await supabaseService.saveSale(totals);
+                    if (ventaId) {
+                        const detallesConId = detalles.map(d => ({ ...d, venta_id: ventaId }));
+                        await supabaseService.saveSaleDetails(detallesConId);
+
+                        // 🚀 ACTUALIZAR STOCK EN SUPABASE
+                        if (userId) {
+                            await supabaseService.updateInventoryStock(userId, detallesConId);
+                            
+                            const freshInventory = await supabaseService.getInventory(userId);
+                            if (freshInventory && freshInventory.length > 0) {
+                                const mappedInventory = freshInventory.map(i => ({
+                                    id: i.id,
+                                    code: i.cod_bar_produc || i.id.toString(),
+                                    name: i.nombre_producto,
+                                    brand: i.marca_producto,
+                                    category: i.categoria,
+                                    stock: i.cantidad_ingreso ?? 50,
+                                    price: i.p_u_venta ?? 1.50,
+                                    ubicacion: i.ubicacion || null,
+                                    fecha_caducidad: i.fecha_caducidad || null,
+                                    saleType: 'empacado',
+                                    um: i.um || 'und',
+                                    unidades_base: i.unidades_base ?? 1
+                                }));
+                                setInventory(mappedInventory);
+                                offlineService.saveInventory(mappedInventory);
+                            }
+                        }
+                        setCart([]); // Limpiar carrito tras éxito
+                        speak("Venta registrada con éxito.");
+                    } else {
+                        // Error de RLS o similar
+                        const msg = "Error de permisos en Base de Datos. Aplicando guardado local.";
+                        console.error("[RLS] Verifique la ejecución de FIX_RLS_DEMO_ANON.sql");
+                        setAssistantResponse("Error de RLS detectado. Revise permisos SQL.");
+                        offlineService.addToSyncQueue(totals, detalles);
+                        setCart([]);
+                        speak("Venta guardada localmente por error de red.");
+                    }
+                } catch (err: any) {
+                    console.error("[Supabase] Error en proceso de venta:", err);
                     offlineService.addToSyncQueue(totals, detalles);
+                    setCart([]);
+                    speak("Guardado local activado.");
                 }
             } else {
                 // Sin internet -> Cola offline
@@ -1001,6 +1266,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
     const [activeTab, setActiveTab] = useState<'pedidos' | 'inventario' | 'acciones'>('pedidos');
     const [isMobile, setIsMobile] = useState(false);
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
         const check = () => setIsMobile(window.innerWidth < 768);
@@ -1060,17 +1326,26 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     }
 
     return (
-        <main style={isMobile ? { minHeight: '100dvh', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-col h-screen overflow-hidden bg-slate-200'}>
+        <main style={isMobile ? { height: '100dvh', overflow: 'hidden', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-col h-screen overflow-hidden bg-slate-200'}>
             <Header onLogout={onLogout} aiMode={aiMode} onModeChange={setAiMode} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} />
 
             {/* Asistente Toast (si hay mensaje) */}
-            {aiMode === 'asistente' && assistantResponse && (
-                <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
-                    <div className="bg-purple-900/90 backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-2xl border border-purple-500/30 flex items-center gap-4 max-w-md w-[90vw]">
-                        <div className="text-3xl">🔮</div>
+            {assistantResponse && (
+                <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-none">
+                    <div className={cn(
+                        "backdrop-blur-md text-white px-6 py-4 rounded-2xl shadow-2xl border flex items-center gap-4 max-w-md w-[90vw]",
+                        assistantResponse.includes("AGOTADO") || assistantResponse.includes("insuficiente") || assistantResponse.includes("No hay")
+                            ? "bg-red-600/90 border-red-400/50" 
+                            : "bg-purple-900/90 border-purple-500/30"
+                    )}>
+                        <div className="text-3xl">
+                            {assistantResponse.includes("AGOTADO") ? "🚫" : "🔮"}
+                        </div>
                         <div>
-                            <p className="font-bold text-sm text-purple-200 mb-1">Caserita Responde:</p>
-                            <p className="text-lg font-medium">{assistantResponse}</p>
+                            <p className="font-bold text-xs opacity-70 mb-1 uppercase tracking-widest">
+                                {assistantResponse.includes("AGOTADO") ? "Alerta de Stock" : "Caserita Responde"}
+                            </p>
+                            <p className="text-lg font-black leading-tight uppercase italic">{assistantResponse}</p>
                         </div>
                     </div>
                 </div>
@@ -1098,7 +1373,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         <PaymentMethods onPayment={handlePayment} />
                     </div>
                     <div className="flex-[2] flex flex-col">
-                        <InventoryPanel inventory={inventory} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
+                        <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
                     </div>
                     <div className="flex-[1] flex flex-col">
                         <ActionPanel
@@ -1126,6 +1401,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                             onOpenBuyers={() => setShowBuyers(true)}
                             onOpenProveedores={() => setShowProveedores(true)}
                             onOpenLiveMonitor={() => setShowLiveMonitor(true)}
+                            onOpenSecurity={() => setShowSecurityPanel(true)}
                             onPanic={triggerPanicAction}
                             onOpenWhatsApp={() => { const message = encodeURIComponent("📢 *Caserita Smart* trae ofertas hoy:\n\n" + inventory.slice(0, 5).map(i => `✅ ${i.name} a S/ ${i.price.toFixed(2)}`).join("\n")); window.open(`https://wa.me/?text=${message}`, "_blank"); }}
                         />
@@ -1135,12 +1411,106 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
             {/* ===== MOBILE LAYOUT ===== */}
             {isMobile && (
-                <>
-                    {/* Contenido con paddingBottom para no quedar bajo la nav bar fija */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '8px', paddingBottom: '72px' }}>
+                <div style={{ display: 'flex', flex: 1, position: 'relative', minHeight: 0 }}>
+                    {/* Botón sutil para abrir el menú cuando está oculto */}
+                    {!isSidebarOpen && (
+                        <button 
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="absolute left-0 top-1/2 -translate-y-1/2 bg-[#0f172a] text-slate-300 p-1.5 py-4 rounded-r-xl shadow-2xl z-[40] border border-l-0 border-[#334155] opacity-80 hover:opacity-100 transition-opacity"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
+                        </button>
+                    )}
+
+                    {/* SIDEBAR (X-plore style) on the Left */}
+                    <div style={{
+                        width: isSidebarOpen ? '60px' : '0px',
+                        opacity: isSidebarOpen ? 1 : 0,
+                        pointerEvents: isSidebarOpen ? 'auto' : 'none',
+                        backgroundColor: '#0f172a',
+                        borderRight: isSidebarOpen ? '2px solid #334155' : 'none',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '16px',
+                        padding: isSidebarOpen ? '16px 0' : '0',
+                        zIndex: 40, // Debajo de los modales (z-50)
+                        overflowY: 'auto',
+                        overflowX: 'hidden',
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        bottom: 0,
+                        transition: 'all 0.2s ease-out',
+                        boxShadow: isSidebarOpen ? '4px 0 15px rgba(0,0,0,0.5)' : 'none'
+                    }}>
+                        {/* Botón para cerrar el menú */}
+                        {isSidebarOpen && (
+                            <button onClick={() => setIsSidebarOpen(false)} style={{ color: '#94a3b8', background: 'none', border: 'none', marginBottom: '-8px' }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                            </button>
+                        )}
+                        <button onClick={() => setShowConfig(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#94a3b8', background: 'none', border: 'none' }}>
+                            <Settings className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Config</span>
+                        </button>
+
+                        <button onClick={() => setShowScanner(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#60a5fa', background: 'none', border: 'none' }}>
+                            <QrCode className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Scan</span>
+                        </button>
+
+                        <button onClick={() => setShowMaster(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#4ade80', background: 'none', border: 'none' }}>
+                            <Database className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Catál</span>
+                        </button>
+
+                        <button onClick={() => setShowBuyers(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#fb923c', background: 'none', border: 'none', position: 'relative' }}>
+                            <Store className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Buzón</span>
+                            {pendingOrders.filter(o => o.estado === 'pendiente').length > 0 && (
+                                <span style={{ position: 'absolute', top: '-4px', right: '8px', backgroundColor: '#ef4444', color: 'white', borderRadius: '9999px', width: '14px', height: '14px', fontSize: '8px', fontWeight: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #0f172a' }}>
+                                    {pendingOrders.filter(o => o.estado === 'pendiente').length}
+                                </span>
+                            )}
+                        </button>
+
+                        <button onClick={() => setShowFiados(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#a78bfa', background: 'none', border: 'none' }}>
+                            <MoreHorizontal className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Créd</span>
+                        </button>
+
+                        <button onClick={() => setShowProveedores(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#38bdf8', background: 'none', border: 'none' }}>
+                            <PieChart className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Gastos</span>
+                        </button>
+
+                        <button onClick={() => { const message = encodeURIComponent("📢 *Caserita Smart* trae ofertas hoy:\n\n" + inventory.slice(0, 5).map(i => `✅ ${i.name} a S/ ${i.price.toFixed(2)}`).join("\n")); window.open(`https://wa.me/?text=${message}`, "_blank"); }} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#34d399', background: 'none', border: 'none' }}>
+                            <MessageCircle className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Promo</span>
+                        </button>
+
+                        <button onClick={() => setShowReports(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#fbbf24', background: 'none', border: 'none' }}>
+                            <BarChart className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Report</span>
+                        </button>
+
+                        <button onClick={() => setShowSecurityPanel(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#f43f5e', background: 'none', border: 'none' }}>
+                            <Camera className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Cams</span>
+                        </button>
+
+                        <button onClick={triggerPanicAction} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#ef4444', background: 'none', border: 'none', marginTop: 'auto' }}>
+                            <ShieldAlert className="w-5 h-5 animate-pulse" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#ef4444' }}>Pánico</span>
+                        </button>
+                    </div>
+
+                    {/* Contenido Principal */}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '8px', paddingBottom: '80px' }}>
                         {activeTab === 'pedidos' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative' }}>
-                                {/* VISOR DE COINCIDENCIAS DE VOZ (Nuevo) */}
+                                {/* VISOR DE COINCIDENCIAS DE VOZ */}
                                 {voiceMatches.length > 0 && (
                                     <div className="bg-orange-50 border-2 border-orange-400 p-3 rounded-2xl shadow-lg flex flex-col gap-2 animate-in slide-in-from-top-4">
                                         <div className="flex justify-between items-center">
@@ -1164,52 +1534,24 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                     <PaymentMethods onPayment={handlePayment} />
                                 </div>
 
-                                {/* VISOR DE STOCK EN TIEMPO REAL (Solicitado v3) */}
-                                <div className="border-t-2 border-slate-300 pt-1">
-                                    <div className="h-[220px] overflow-hidden">
-                                        <InventoryPanel
-                                            inventory={inventory}
-                                            onAddToCart={addItemsToCart}
-                                            searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)}
-                                        />
-                                    </div>
+                                {/* VISOR DE STOCK EN TIEMPO REAL */}
+                                <div className="border-t-2 border-slate-300 pt-3 flex-1 min-h-[300px]">
+                                    <InventoryPanel
+                                        inventory={inventory}
+                                        cart={cart}
+                                        onAddToCart={addItemsToCart}
+                                        searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)}
+                                    />
                                 </div>
                             </div>
                         )}
 
                         {activeTab === 'inventario' && (
-                            <InventoryPanel inventory={inventory} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
-                        )}
-                        {activeTab === 'acciones' && (
-                            <ActionPanel
-                                isListening={isListening}
-                                isProcessing={isProcessing}
-                                pendingOrdersCount={pendingOrders.filter(o => o.estado === 'pendiente').length}
-                                onToggleListening={() => {
-                                    setPendingCatalogAction(null); // Reset SIEMPRE al tocar el micro
-                                    setAssistantResponse(null);
-                                    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-                                        window.speechSynthesis.cancel();
-                                    }
-                                    if (isListening) stopListening();
-                                    else startListening();
-                                }}
-                                onOpenConfig={() => setShowConfig(true)}
-                                onOpenScanner={() => setShowScanner(true)}
-                                onOpenMaster={() => setShowMaster(true)}
-                                onOpenFiados={() => setShowFiados(true)}
-                                onExport={() => setShowReports(true)}
-                                onOpenQR={() => setShowQR(true)}
-                                onOpenBuyers={() => setShowBuyers(true)}
-                                onOpenProveedores={() => setShowProveedores(true)}
-                                onOpenLiveMonitor={() => setShowLiveMonitor(true)}
-                                onPanic={triggerPanicAction}
-                                onOpenWhatsApp={() => { const message = encodeURIComponent("📢 *Caserita Smart* trae ofertas hoy:\n\n" + inventory.slice(0, 5).map(i => `✅ ${i.name} a S/ ${i.price.toFixed(2)}`).join("\n")); window.open(`https://wa.me/?text=${message}`, "_blank"); }}
-                            />
+                            <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
                         )}
                     </div>
 
-                    {/* Nav bar FIJA en la parte inferior (Identica al Screenshot) */}
+                    {/* Nav bar FIJA en la parte inferior */}
                     <nav style={{
                         position: 'fixed',
                         bottom: 0,
@@ -1229,14 +1571,20 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                             <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Pedidos</span>
                         </button>
 
-                        <button onClick={() => setActiveTab('acciones')} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', color: activeTab === 'acciones' ? '#f97316' : '#94a3b8', background: 'none', border: 'none' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                            <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Acciones</span>
-                        </button>
-
                         <button onClick={() => setActiveTab('inventario')} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', color: activeTab === 'inventario' ? '#f97316' : '#94a3b8', background: 'none', border: 'none' }}>
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                             <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Inventario</span>
+                        </button>
+
+                        {/* 📷 BOTÓN CÁMARAS - Acceso directo a Vigilancia */}
+                        <button
+                            onClick={() => setShowSecurityPanel(true)}
+                            style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', color: '#f43f5e', background: 'none', border: 'none', cursor: 'pointer' }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.361a1 1 0 01-1.447.894L15 14M4 8a2 2 0 00-2 2v4a2 2 0 002 2h8a2 2 0 002-2v-4a2 2 0 00-2-2H4z" />
+                            </svg>
+                            <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Cámaras</span>
                         </button>
 
                         <button
@@ -1260,7 +1608,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                             <span style={{ color: '#ffffff', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Dictar</span>
                         </button>
                     </nav>
-                </>
+                </div>
             )}
 
             {!isMobile && <Footer summary={dailySummary} />}
@@ -1295,6 +1643,104 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             <FastScannerModal isOpen={showScanner} onClose={() => setShowScanner(false)} inventory={inventory} setInventory={setInventory} onAddToCart={addItemsToCart} userId={userId} cajeroNombre={cajeroNombre} />
             <ReportesModal isOpen={showReports} onClose={() => setShowReports(false)} sales={sales} compras={[]} gastos={[]} customers={customers} />
             <LiveMonitorModal isOpen={showLiveMonitor} onClose={() => setShowLiveMonitor(false)} userId={userId || ""} />
+            <SecurityPanel isOpen={showSecurityPanel} onClose={() => setShowSecurityPanel(false)} />
+
+            {/* MODAL DE SELECCIÓN DE COMPROBANTE - v4.0 */}
+            {showReceiptModal && (
+                <div className="fixed inset-0 z-[10001] bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4">
+                    <div className="bg-white rounded-[2.5rem] w-full max-w-md overflow-hidden shadow-2xl border-4 border-emerald-500 animate-in zoom-in duration-200">
+                        <div className="bg-emerald-500 p-6 text-white text-center">
+                            <FileText className="w-12 h-12 mx-auto mb-2" />
+                            <h2 className="text-2xl font-black uppercase tracking-tight">Tipo de Comprobante</h2>
+                            <p className="text-emerald-100 text-sm font-bold">¿Cómo desea sustentar la compra?</p>
+                        </div>
+
+                        <div className="p-6 space-y-4">
+                            {/* Opciones de Comprobante */}
+                            <div className="grid grid-cols-3 gap-3">
+                                <button
+                                    onClick={() => { setReceiptType('whatsapp'); setCustomerTaxId(""); }}
+                                    className={`flex flex-col items-center justify-center p-4 rounded-3xl border-2 transition-all ${receiptType === 'whatsapp' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
+                                >
+                                    <Smartphone className="w-8 h-8 mb-2" />
+                                    <span className="text-[10px] font-black uppercase">WhatsApp</span>
+                                </button>
+                                <button
+                                    onClick={() => setReceiptType('boleta')}
+                                    className={`flex flex-col items-center justify-center p-4 rounded-3xl border-2 transition-all ${receiptType === 'boleta' ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
+                                >
+                                    <FileText className="w-8 h-8 mb-2" />
+                                    <span className="text-[10px] font-black uppercase">Boleta</span>
+                                </button>
+                                <button
+                                    onClick={() => setReceiptType('factura')}
+                                    className={`flex flex-col items-center justify-center p-4 rounded-3xl border-2 transition-all ${receiptType === 'factura' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-100 bg-slate-50 text-slate-400'}`}
+                                >
+                                    <FileText className="w-8 h-8 mb-2" />
+                                    <span className="text-[10px] font-black uppercase">Factura</span>
+                                </button>
+                            </div>
+
+                            {/* Campo RUC/DNI dinámico */}
+                            {(receiptType === 'boleta' || receiptType === 'factura') && (
+                                <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Documento de Identidad (RUC/DNI)</label>
+                                    <div className="relative">
+                                        <input
+                                            type="number"
+                                            value={customerTaxId}
+                                            onChange={(e) => {
+                                                const val = e.target.value;
+                                                setCustomerTaxId(val);
+                                                // Búsqueda automática simple en el estado global
+                                                const match = customers.find(c => c.dni === val || c.ruc === val);
+                                                if (match) speak(`Cliente ${match.fullName} reconocido.`);
+                                            }}
+                                            placeholder={receiptType === 'factura' ? "Ingrese RUC (11 dígitos)" : "Ingrese DNI o RUC"}
+                                            className="w-full bg-slate-100 border-2 border-slate-200 rounded-2xl px-6 py-4 font-bold text-lg focus:border-emerald-500 outline-none transition-all"
+                                        />
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                            {customers.some(c => c.dni === customerTaxId || c.ruc === customerTaxId) ? (
+                                                <UserCheck className="w-6 h-6 text-emerald-500" />
+                                            ) : (
+                                                <Search className="w-6 h-6 text-slate-300" />
+                                            )}
+                                        </div>
+                                    </div>
+                                    {/* Mostrar nombre si existe */}
+                                    {customers.find(c => c.dni === customerTaxId || c.ruc === customerTaxId) && (
+                                        <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-xs font-bold border border-emerald-100">
+                                            ✅ Cliente: {customers.find(c => c.dni === customerTaxId || c.ruc === customerTaxId)?.fullName}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {receiptType === 'whatsapp' && (
+                                <div className="bg-amber-50 text-amber-700 p-4 rounded-3xl border border-amber-100 flex items-start gap-3">
+                                    <Share2 className="w-5 h-5 shrink-0" />
+                                    <p className="text-[11px] font-medium italic">Se generará un recibo detallado para enviar por la billetera digital o WhatsApp.</p>
+                                </div>
+                            )}
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={() => { setShowReceiptModal(false); setSelectedPaymentMethod(null); }}
+                                    className="flex-1 px-4 py-5 bg-slate-100 text-slate-500 font-black rounded-3xl hover:bg-slate-200 transition-all uppercase tracking-widest text-xs"
+                                >
+                                    Atrás
+                                </button>
+                                <button
+                                    onClick={confirmPaymentWithReceipt}
+                                    className="flex-[2] px-4 py-5 bg-emerald-500 text-white font-black rounded-3xl hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 active:scale-95 transition-all uppercase tracking-widest text-xs"
+                                >
+                                    Finalizar Venta 💰
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </main >
     );
 }

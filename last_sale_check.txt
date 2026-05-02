@@ -1,0 +1,8 @@
+=== DETALLES DE LA ÚLTIMA VENTA REGISTRADA ===
+No hay registros en la tabla 'ventas'. Buscando en 'pedidos_entrantes'...
+ID Pedido: c1fa69f5-141b-4b0e-8f80-5884c95e5fee
+Fecha: 2026-03-28T06:19:13.50953+00:00
+Cliente: Test Diagnostic
+Total: S/ 10
+Productos en el pedido:
+- Test Product | Cant: 1

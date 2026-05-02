@@ -1,6 +1,7 @@
 import { User, LogOut, ShoppingCart, Sparkles, Cloud, CloudOff, RefreshCcw, ShieldAlert } from 'lucide-react';
 import { AIMode } from './Dashboard';
 import { PanicButton } from './PanicButton';
+import { cn } from "@/lib/utils";
 
 interface HeaderProps {
     onLogout?: () => void;
@@ -20,10 +21,10 @@ export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombr
             <div className="flex justify-between items-start">
                 <div>
                     <h1 className="text-xl font-black text-white leading-tight tracking-tight">
-                        Caserita Inteligente V1.02.26
+                        Caserita Inteligente v4.0
                     </h1>
-                    <div className="text-white text-[10px] font-black tracking-[0.2em] opacity-90 mt-0.5 uppercase">
-                        [LOCAL-V2]
+                    <div className="text-amber-400 text-[10px] font-black tracking-[0.2em] mt-0.5 uppercase flex items-center gap-1">
+                        <Sparkles className="w-3 h-3" /> CONFIG-VOZ ACTIVA
                     </div>
                 </div>
                 <button
@@ -36,10 +37,10 @@ export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombr
 
             {/* Row 2: Status & Main Action */}
             <div className="flex justify-between items-center">
-                <div className="flex items-center gap-1.5">
-                    <Cloud className={`w-3.5 h-3.5 ${isOnline ? 'text-green-400' : 'text-red-400'}`} />
-                    <span className="text-[9px] font-black text-white uppercase tracking-widest leading-none">
-                        {isOnline ? 'EN LÍNEA' : 'OFFLINE'}
+                <div className="flex items-center gap-2">
+                    <div className={cn("w-2 h-2 rounded-full", isOnline ? 'bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.5)]' : 'bg-red-500')} />
+                    <span className="text-[11px] font-black text-white uppercase tracking-widest leading-none">
+                        {isOnline ? 'SISTEMA EN LÍNEA' : 'MODO OFFLINE'}
                     </span>
                 </div>
 
@@ -55,10 +56,10 @@ export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombr
 
             {/* Row 3: Admin, Assistant & Exit */}
             <div className="flex justify-between items-center bg-[#172554]/30 p-1 rounded-xl">
-                <div className="flex items-center gap-2 pl-2">
+                <div className="flex items-center gap-3 pl-2">
                     <div className="flex flex-col leading-none">
-                        <span className="text-white font-black text-[11px] tracking-tight">{cajeroNombre}</span>
-                        <span className="text-white/50 text-[8px] font-bold uppercase tracking-widest leading-none">Propietario</span>
+                        <span className="text-white font-black text-sm tracking-tight">{cajeroNombre}</span>
+                        <span className="text-blue-200 text-[10px] font-black uppercase tracking-widest leading-none mt-0.5">PROPIETARIO/A</span>
                     </div>
                     <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center border-2 border-white/20 shadow-inner">
                         <User className="w-3.5 h-3.5 text-white" />

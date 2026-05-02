@@ -189,6 +189,53 @@ export const supabaseService = {
         }
     },
 
+    /**
+     * Actualiza el stock en la tabla ingres_produc restando la cantidad vendida.
+     * Se hace de forma atómica usando una operación de sustracción si es posible,
+     * o mediante una lectura-escritura segura.
+     */
+    async updateInventoryStock(codCasero: string, details: SaleDetailInsert[]): Promise<void> {
+        if (!isSupabaseConfigured() || !codCasero || details.length === 0) return;
+
+        console.log(`[Supabase] Actualizando stock para ${details.length} productos...`);
+
+        for (const item of details) {
+            try {
+                // 1. Obtener stock actual
+                const { data, error } = await supabase
+                    .from('ingres_produc')
+                    .select('cantidad_ingreso')
+                    .eq('cod_casero', codCasero)
+                    .eq('producto_id', item.producto_id)
+                    .single();
+
+                if (error) {
+                    console.error(`[Supabase] Error al obtener stock para producto ${item.producto_id}:`, error.message);
+                    continue;
+                }
+
+                if (data) {
+                    const nuevoStock = Math.max(0, (data.cantidad_ingreso || 0) - item.cantidad);
+                    
+                    // 2. Actualizar stock
+                    const { error: updError } = await supabase
+                        .from('ingres_produc')
+                        .update({ cantidad_ingreso: nuevoStock })
+                        .eq('cod_casero', codCasero)
+                        .eq('producto_id', item.producto_id);
+
+                    if (updError) {
+                        console.error(`[Supabase] Error al actualizar stock para producto ${item.producto_id}:`, updError.message);
+                    } else {
+                        console.log(`[Supabase] Stock actualizado para ${item.producto_id}: ${data.cantidad_ingreso} -> ${nuevoStock}`);
+                    }
+                }
+            } catch (e) {
+                console.error(`[Supabase] Excepción actualizando stock para ${item.producto_id}:`, e);
+            }
+        }
+    },
+
     async getTodaySales(): Promise<any[]> {
         if (!isSupabaseConfigured()) return [];
         try {

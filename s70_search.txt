@@ -1,0 +1,7 @@
+=== REPORTE DE BUSQUEDA: MOVIMIENTO S/ 70.00 ===
+¡ENCONTRADO EN VENTAS! Encontrado(s) 1 registro(s).
+ID: 170 | Fecha: 2026-04-15T21:04:58.116063+00:00 | Total: 70
+No se encontró en 'pedidos_entrantes' con total exacto de 70.00.
+
+--- Análisis de los últimos 10 pedidos (Buscando items específicos) ---
+¡COINCIDENCIA ENCONTRADA! Pedido ID: 619a7785-e6ad-4904-bff7-23a8801eab44 | Total: 3 | Items: [{"id":226,"um":"und","qty":2,"code":"AB-013","name":"Papa Canchán","price":1.5,"stock":50,"subtotal":3}]

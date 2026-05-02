@@ -1,5 +1,19 @@
 @import "tailwindcss";
 
+/* HIDE VERCEL / NEXT.JS DEV TOOLBAR & BADGES */
+vercel-live-feedback, 
+[data-vercel-toolbar],
+#vercel-live-feedback-container,
+.nextjs-static-indicator,
+div[class*="nextjs-dev-overlay"],
+div[class*="VercelToolbar"],
+div[class*="nextjs-portal"] {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  opacity: 0 !important;
+}
+
 :root {
   --background: #1e293b;
   --foreground: #f1f5f9;

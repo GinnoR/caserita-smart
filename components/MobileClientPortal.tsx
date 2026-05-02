@@ -86,6 +86,7 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                         price: 1.50, // Default price
                         um: p.um || 'und',
                         unidades_base: p.unidades_base || 1,
+                        sale_type: p.sale_type || 'empacado',
                         stock: 50
                     })));
                 } else {
@@ -96,6 +97,7 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                         price: row.p_u_venta || 1.50,
                         um: row.inventario.um || 'und',
                         unidades_base: row.inventario.unidades_base || 1,
+                        sale_type: row.inventario.sale_type || 'empacado',
                         stock: row.cantidad_ingreso || 0
                     })));
                 }
@@ -123,6 +125,7 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                     price: p.price,
                     um: p.name.toLowerCase().includes("arroz") || p.name.toLowerCase().includes("azúcar") ? "kg" : "und",
                     unidades_base: p.name.toLowerCase().includes("arroz") ? 50 : 1,
+                    sale_type: p.name.toLowerCase().includes("arroz") ? 'empacado' : 'granel',
                     stock: 100
                 })));
                 console.error("DEBUG - Fallback activado:", errorMsg);
@@ -201,7 +204,9 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
         const newCart = [...cart];
         const item = { ...newCart[index] };
         const minQty = item.um === 'kg' ? 0.1 : 1;
-        item.qty = Math.max(minQty, item.qty + delta);
+        // Convert to Number to avoid string concatenation if qty was somehow a string
+        const currentQty = Number(item.qty) || 0;
+        item.qty = Math.max(minQty, currentQty + delta);
         item.subtotal = item.qty * item.price;
         newCart[index] = item;
         setCart(newCart);
@@ -355,17 +360,70 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                     }
 
                     const qtyDesc = Number.isInteger(newItem.qty) ? newItem.qty : newItem.qty.toFixed(3);
-                    speechSummary += `Agregado ${qtyDesc} de ${newItem.name} a ${newItem.price} soles. `;
+                    speechSummary += `Agregado ${qtyDesc} de ${newItem.name}. `;
                 });
 
                 setCart([...newCart]);
                 // Reproducimos la confirmación por voz para el cliente
                 speak(speechSummary);
+                return;
             } else {
-                // 3. INTENTOS DE COMANDO (Pago y Envío)
+                // 3. INTENTOS DE COMANDO (Gestión, Pago y Envío)
                 const lowerText = cleanedText.toLowerCase();
 
-                // Comandos de Pago
+                // --- COMANDOS DE GESTIÓN (BORRAR / EDITAR / AUMENTAR) ---
+                if (lowerText.startsWith("borrar") || lowerText.startsWith("quitar") || lowerText.startsWith("eliminar")) {
+                    const searchName = lowerText.replace(/borrar|quitar|eliminar|de/g, "").trim();
+                    const index = cart.findIndex(i => i.name.toLowerCase().includes(searchName));
+                    if (index !== -1) {
+                        const removedName = cart[index].name;
+                        removeItem(index);
+                        speak(`He quitado ${removedName} de tu pedido.`);
+                        return;
+                    }
+                }
+
+                if (lowerText.startsWith("aumentar") || lowerText.startsWith("subir") || lowerText.startsWith("aumenta")) {
+                    // "Aumentar 2 de arroz"
+                    const m = lowerText.match(/(aumentar|subir|aumenta)\s+(\d+)\s+(?:de\s+)?(.*)/);
+                    if (m) {
+                        const qty = parseInt(m[2]);
+                        const name = m[3].trim();
+                        const index = cart.findIndex(i => i.name.toLowerCase().includes(name));
+                        if (index !== -1) {
+                            updateCartItemQty(index, qty);
+                            speak(`He aumentado ${qty} para ${cart[index].name}.`);
+                            return;
+                        }
+                    }
+                }
+
+                if (lowerText.startsWith("disminuir") || lowerText.startsWith("bajar") || lowerText.startsWith("menos")) {
+                    // "Menos 1 de arroz"
+                    const m = lowerText.match(/(disminuir|bajar|menos)\s+(\d+)\s+(?:de\s+)?(.*)/);
+                    if (m) {
+                        const qty = parseInt(m[2]);
+                        const name = m[3].trim();
+                        const index = cart.findIndex(i => i.name.toLowerCase().includes(name));
+                        if (index !== -1) {
+                            updateCartItemQty(index, -qty);
+                            speak(`He disminuido ${qty} para ${cart[index].name}.`);
+                            return;
+                        }
+                    }
+                }
+
+                if (lowerText.startsWith("editar")) {
+                    const searchName = lowerText.replace("editar", "").trim();
+                    const product = products.find(p => p.name.toLowerCase().includes(searchName));
+                    if (product) {
+                        handleManualAdd(product);
+                        speak(`Abriendo edición para ${product.name}`);
+                        return;
+                    }
+                }
+
+                // --- COMANDOS DE PAGO ---
                 if (lowerText.includes("yape") || lowerText.includes("plin")) {
                     setPaymentMethod("Yape");
                     speak("Cambiado a Yape o Plin.");
@@ -398,7 +456,13 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                     return;
                 }
 
-                speak("No pude reconocer tu pedido o comando, ¿podrías repetirlo?");
+                // --- MENSAJE DE RECHAZO DE BULTOS (FRACCIONES) ---
+                if (lowerText.includes("soles") || lowerText.includes("sol")) {
+                    speak("Lo siento, no puedo vender fracciones de bultos por ese precio. Dicta unidades enteras.");
+                    return;
+                }
+
+                speak("No pude reconocer tu comando, ¿podrías repetirlo?");
             }
         } catch (error) {
             console.error("Error procesando voz del cliente", error);
@@ -734,7 +798,7 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                         ) : (
                             <div className="grid grid-cols-2 gap-3 pb-60 mt-2">
                                 {displayedProducts.map((product: any, idx: number) => {
-                                    const display = formatStock(product.stock, product.unidades_base, product.name, product.um);
+                                    const display = formatStock(product.stock, product.unidades_base, product.name, product.um, product.sale_type);
                                     const isLowStock = product.stock <= (product.unidades_base > 1 ? product.unidades_base : 5);
                                     
                                     return (

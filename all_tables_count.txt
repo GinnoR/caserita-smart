@@ -1,0 +1,13 @@
+=== BUSCANDO TABLAS CON DATOS ===
+- inventario: 261 registros
+- ingres_produc: 261 registros
+- ventas: 0 registros
+- pedidos_entrantes: 8 registros
+- inventory: 0 registros
+- sales: 0 registros
+- customers: 0 registros
+- products: null registros
+- stock: null registros
+- usuarios_perfil: null registros
+- asistentes: 0 registros
+- clientes: 0 registros

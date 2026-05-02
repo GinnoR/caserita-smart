@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Camera, X, Search, CheckCircle, Database } from "lucide-react";
+import { Camera, X, Package, Plus, Search, Tag, Calendar, Database, ShoppingCart, Loader2, CheckCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/utils/supabase/client";
+import { formatStock } from "@/lib/format-utils";
 
 interface FastScannerModalProps {
     isOpen: boolean;
@@ -15,6 +17,8 @@ interface FastScannerModalProps {
 
 export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onAddToCart, userId, cajeroNombre }: FastScannerModalProps) {
     const [scannedCode, setScannedCode] = useState("");
+    const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+    const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
     const [isScanning, setIsScanning] = useState(false);
     const [searchStatus, setSearchStatus] = useState<"idle" | "searching" | "found_local" | "found_master" | "not_found">("idle");
     const [foundProduct, setFoundProduct] = useState<any>(null);
@@ -22,6 +26,36 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
     const [errorMsg, setErrorMsg] = useState("");
 
     const scannerRef = useRef<Html5Qrcode | null>(null);
+
+    // Cargar cámaras disponibles
+    useEffect(() => {
+        const getDevices = async () => {
+            try {
+                // Permiso rápido para etiquetas
+                await navigator.mediaDevices.getUserMedia({ video: true }).catch(() => {});
+                const devs = await navigator.mediaDevices.enumerateDevices();
+                const videoDevs = devs.filter(d => d.kind === 'videoinput');
+                setDevices(videoDevs);
+                
+                // Priorizar PS3 Eye o USB Camera
+                const ps3Cam = videoDevs.find(d => 
+                    d.label.toLowerCase().includes('ps3') || 
+                    d.label.toLowerCase().includes('eye') || 
+                    d.label.toLowerCase().includes('usb') ||
+                    d.label.toLowerCase().includes('b4.09.24.1')
+                );
+
+                if (ps3Cam) {
+                    setSelectedDeviceId(ps3Cam.deviceId);
+                } else if (videoDevs.length > 0 && !selectedDeviceId) {
+                    setSelectedDeviceId(videoDevs[0].deviceId);
+                }
+            } catch (err) {
+                console.error("Error enumerando cámaras:", err);
+            }
+        };
+        if (isOpen) getDevices();
+    }, [isOpen]);
 
     // Form inputs when product is not local
     const [newPrice, setNewPrice] = useState("");
@@ -54,23 +88,37 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
         setIsScanning(true);
         setErrorMsg("");
 
-        // Wait for React to render the #reader div
         setTimeout(async () => {
             try {
                 const html5QrCode = new Html5Qrcode("reader");
                 scannerRef.current = html5QrCode;
 
-                await html5QrCode.start(
-                    { facingMode: "environment" },
-                    { fps: 10, qrbox: { width: 250, height: 150 } },
-                    (decodedText) => {
-                        handleScanSuccess(decodedText);
-                        stopScanner(); // Stop after first successful scan
-                    },
-                    (errorMessage) => {
-                        // Ignore continuous scanning errors
-                    }
-                );
+                const config = { 
+                    fps: 20, 
+                    qrbox: { width: 250, height: 250 },
+                    aspectRatio: 1.0
+                };
+
+                const onScanSuccess = (decodedText: string) => {
+                    handleScanSuccess(decodedText);
+                    stopScanner();
+                };
+
+                if (selectedDeviceId) {
+                    await html5QrCode.start(
+                        selectedDeviceId,
+                        config,
+                        onScanSuccess,
+                        () => {}
+                    );
+                } else {
+                    await html5QrCode.start(
+                        { facingMode: "environment" },
+                        config,
+                        onScanSuccess,
+                        () => {}
+                    );
+                }
             } catch (err: any) {
                 console.error("Error starting scanner:", err);
                 setErrorMsg("No se pudo iniciar la cámara. Revisa los permisos.");
@@ -105,7 +153,7 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
 
         // 2. MASTER DB SEARCH
         try {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('productos_maestra')
                 .select('*')
                 .eq('barcode', code)
@@ -133,7 +181,7 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
     const handleScanMasterForce = async (code: string) => {
         setSearchStatus("searching");
         try {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('productos_maestra')
                 .select('*')
                 .eq('barcode', code)
@@ -174,17 +222,15 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
         }
 
         try {
-            // 1. Prepare product object for the master `inventario` table
             const productData: any = {
                 nombre_producto: foundProduct.product_name,
                 cod_bar_produc: foundProduct.barcode,
                 categoria: (["Abarrotes", "Verduras", "Lácteos", "Otros"].includes(foundProduct.category)) ? foundProduct.category : "Otros",
                 fecha_caducidad: newExpiry ? newExpiry : null,
                 um: newUm,
-                unidades_base: 1 // Default
+                unidades_base: 1
             };
 
-            // Insert into 'inventario'
             const { data: newProd, error: prodError } = await (supabase as any)
                 .from('inventario')
                 .insert(productData)
@@ -193,7 +239,6 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
 
             if (prodError || !newProd) throw prodError || new Error("Failed to insert inventory");
 
-            // 2. Link with casero's stock/price in 'ingres_produc'
             const isUUID = userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
             if (isUUID) {
                 const { error: vinculacionError } = await (supabase as any)
@@ -208,7 +253,6 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
                 if (vinculacionError) throw vinculacionError;
             }
 
-            // 3. Update local UI
             const localItem = {
                 id: newProd.id,
                 code: newProd.cod_bar_produc,
@@ -222,7 +266,6 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
 
             setInventory([localItem, ...inventory]);
 
-            // Automatically add 1 unit to cart
             onAddToCart([
                 {
                     code: localItem.code,
@@ -246,11 +289,9 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
 
     return (
         <div className="fixed inset-0 bg-slate-900/80 z-[100] flex flex-col justify-end sm:justify-center items-center animate-in fade-in duration-300 backdrop-blur-sm">
-            {/* Background Tap to Close (Mobile) */}
             <div className="absolute inset-0 z-0" onClick={onClose}></div>
 
             <div className="bg-white rounded-t-[2.5rem] sm:rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col z-10 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300 max-h-[92vh]">
-                {/* Pull Bar for Mobile Drawer feel */}
                 <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto my-3 sm:hidden" onClick={onClose}></div>
 
                 <div className="bg-gradient-to-r from-blue-700 to-indigo-800 p-5 text-white flex justify-between items-center shadow-md">
@@ -266,35 +307,57 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
                 </div>
 
                 <div className="p-6 flex flex-col gap-5 bg-slate-50 overflow-y-auto">
-                    {/* Scanner Area */}
-                    {isScanning ? (
-                        <div className="relative w-full rounded-3xl overflow-hidden bg-black aspect-video flex items-center justify-center shadow-inner border-4 border-white/10">
+                    {isScanning && (
+                        <div className="relative w-full rounded-3xl overflow-hidden bg-black aspect-square flex items-center justify-center shadow-inner border-4 border-white/10">
                             <div id="reader" className="w-full h-full object-cover"></div>
-                            <button
-                                onClick={stopScanner}
-                                className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-red-600 text-white px-8 py-3 rounded-full font-black text-sm shadow-2xl border-2 border-white/20 active:scale-95 transition-all"
-                            >
-                                DETENER CÁMARA
-                            </button>
                         </div>
-                    ) : (
-                        searchStatus === "idle" && (
-                            <button
-                                onClick={startScanner}
-                                className="w-full bg-blue-100 hover:bg-blue-200 border-4 border-dashed border-blue-300 py-12 rounded-[2rem] flex flex-col items-center justify-center gap-4 transition-all active:scale-95 text-blue-700 group"
-                            >
-                                <div className="bg-blue-200 p-4 rounded-full group-hover:scale-110 transition-transform">
-                                    <Camera className="w-14 h-14" />
-                                </div>
-                                <span className="font-black text-xl tracking-tight">Activar Cámara</span>
-                            </button>
-                        )
                     )}
 
                     {errorMsg && <div className="text-red-600 font-black text-sm text-center bg-red-100 p-4 rounded-2xl border-2 border-red-200 animate-shake">{errorMsg}</div>}
 
-                    {/* Manual Input Fallback */}
-                    {searchStatus === "idle" && !isScanning && (
+                    {/* Selector de Cámara Prioritario */}
+                    {!isScanning && devices.length > 0 && (
+                        <div className="mx-6 mt-4 p-4 bg-orange-50 rounded-3xl border-2 border-orange-200 shadow-sm animate-in slide-in-from-top-2">
+                            <label className="text-[10px] font-black uppercase text-orange-600 ml-1 mb-2 block">Cámara de Escaneo:</label>
+                            <select 
+                                value={selectedDeviceId}
+                                onChange={(e) => setSelectedDeviceId(e.target.value)}
+                                className="w-full p-3 bg-white border-2 border-orange-300 rounded-xl text-sm font-bold text-slate-800 outline-none focus:ring-4 focus:ring-orange-500/20 transition-all appearance-none cursor-pointer"
+                            >
+                                {devices.map(d => (
+                                    <option key={d.deviceId} value={d.deviceId}>
+                                        {d.label || `Cámara ${d.deviceId.slice(0,5)}`}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-[9px] text-orange-400 font-bold uppercase mt-2 ml-1 italic text-center">
+                                {devices.find(d => d.deviceId === selectedDeviceId)?.label.toLowerCase().includes('eye') || devices.find(d => d.deviceId === selectedDeviceId)?.label.toLowerCase().includes('ps3')
+                                    ? "✅ PS3 EYE DETECTADA Y LISTA" 
+                                    : "⚠️ REVISA QUE ESTÉ SELECCIONADA LA PS3 EYE"}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Botón de Acción Principal */}
+                    <div className="px-6 pb-6">
+                        <button
+                            onClick={isScanning ? stopScanner : startScanner}
+                            className={cn(
+                                "w-full py-5 rounded-3xl text-white font-black uppercase tracking-widest transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3",
+                                isScanning 
+                                    ? "bg-red-600 hover:bg-red-700 shadow-red-600/30" 
+                                    : "bg-blue-600 hover:bg-blue-700 shadow-blue-600/30"
+                            )}
+                        >
+                            {isScanning ? (
+                                <><X className="w-6 h-6" /> Detener Cámara</>
+                            ) : (
+                                <><Camera className="w-6 h-6" /> Iniciar Escaneo</>
+                            )}
+                        </button>
+                    </div>
+
+                    {!isScanning && searchStatus === "idle" && (
                         <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-4">
                                 <hr className="flex-1 border-slate-300" />
@@ -318,7 +381,6 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
                         </div>
                     )}
 
-                    {/* Results Area */}
                     {searchStatus === "searching" && (
                         <div className="py-16 flex flex-col items-center gap-4 text-blue-600">
                             <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -343,20 +405,6 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
                                             </div>
                                             <span className="text-green-700 font-black text-2xl whitespace-nowrap ml-2">S/ {match.price.toFixed(2)}</span>
                                         </div>
-                                        <div className="flex justify-between items-center py-2 border-y border-slate-50">
-                                            <span className="text-sm font-bold text-slate-500">Stock: 
-                                                <strong className={`ml-2 text-lg ${match.stock <= (match.unidades_base > 1 ? match.unidades_base : 5) ? 'text-red-600 font-black' : 'text-slate-900'}`}>
-                                                    {match.unidades_base > 1 
-                                                        ? `${(match.stock / match.unidades_base).toFixed(1)} ${match.name.match(/\(([^)]+)\)/)?.[1]?.split(' ')?.[0]?.toLowerCase() || 'unid'}${ (match.stock / match.unidades_base) !== 1 ? 's' : ''}`
-                                                        : `${match.stock} ${match.um === 'und' ? 'unid' : match.um}`}
-                                                </strong>
-                                            </span>
-                                            {match.fecha_caducidad && (
-                                                <span className="text-orange-600 bg-orange-50 px-3 py-1 rounded-full font-black text-[10px] border border-orange-100 uppercase tracking-tighter">
-                                                    Vence: {new Date(match.fecha_caducidad).toLocaleDateString()}
-                                                </span>
-                                            )}
-                                        </div>
                                         <button
                                             onClick={() => {
                                                 if (navigator.vibrate) navigator.vibrate(50);
@@ -369,7 +417,6 @@ export function FastScannerModal({ isOpen, onClose, inventory, setInventory, onA
                                     </div>
                                 ))}
                             </div>
-
                             <button onClick={() => {
                                 setLocalMatches([]);
                                 handleScanMasterForce(scannedCode);

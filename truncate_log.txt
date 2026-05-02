@@ -1,0 +1,4 @@
+=== APLICANDO REGLA DE TRUNCAMIENTO (SACOS > 10) ===
+Procesando 0 registros...
+
+Total de ajustes realizados: 0

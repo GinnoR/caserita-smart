@@ -225,10 +225,25 @@ export function localParse(text: string, catalog: any[]): MatchedItem[] {
                     qty = qty / 100;
                 }
                 const actualQty = product.price > 0 ? qty / product.price : 0;
+                
+                // --- REGLA GINNO: NO FRACCIONES EN BULTOS (Salvo GRANEL) ---
+                const isBulk = product.unidades_base > 1;
+                const isGranel = product.name.toLowerCase().includes("granel") || 
+                                (product.um && product.um.toLowerCase() === 'kg' && !isBulk);
+                
+                // Si es bulto y el resultado no es entero (con margen de error pequeño)
+                if (isBulk && !isGranel) {
+                    const isWhole = Math.abs(actualQty - Math.round(actualQty)) < 0.01;
+                    if (!isWhole) {
+                        console.warn(`RECHAZADO: ${qty} soles para ${product.name} (Bulto: ${product.unidades_base}) no da unidades enteras.`);
+                        return []; // No procesar si no es un monto exacto de bultos
+                    }
+                }
+
                 return [{
                     code: product.code,
                     name: product.name,
-                    qty: parseFloat(actualQty.toFixed(3)),
+                    qty: isBulk ? Math.round(actualQty) : parseFloat(actualQty.toFixed(3)),
                     um: product.um || 'und',
                     price: product.price,
                     subtotal: parseFloat(qty.toFixed(2)),

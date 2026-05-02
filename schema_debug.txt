@@ -1,0 +1,26 @@
+=== INSPECCIÓN TABLA INVENTARIO ===
+Columnas detectadas:
+- id
+- cod_bar_produc
+- nombre_producto
+- marca_producto
+- categoria
+- created_at
+- ubicacion
+- fecha_caducidad
+- um
+- unidades_base
+
+Ejemplo de datos:
+{
+  "id": 1,
+  "cod_bar_produc": "PERU00000001",
+  "nombre_producto": "Arroz Extra",
+  "marca_producto": "Faraón",
+  "categoria": "Abarrotes",
+  "created_at": "2026-03-04T05:25:59.065099+00:00",
+  "ubicacion": null,
+  "fecha_caducidad": null,
+  "um": "und",
+  "unidades_base": 1
+}

@@ -1,0 +1,5 @@
+[90m23:22:15.306[0m [32mINF[0m [1mgo2rtc[0m [36mplatform=[0mwindows/amd64 [36mrevision=[0mb2399f3 [36mversion=[0m1.9.2
+[90m23:22:15.352[0m [32mINF[0m [1mconfig[0m [36mpath=[0m"C:\\Users\\hp\\Downloads\\Caserita 10feb26\\caserita-smart\\go2rtc.yaml"
+[90m23:22:15.353[0m [32mINF[0m [1m[rtsp] listen[0m [36maddr=[0m:8554
+[90m23:22:15.353[0m [32mINF[0m [1m[api] listen[0m [36maddr=[0m:1984
+[90m23:22:15.381[0m [32mINF[0m [1m[webrtc] listen[0m [36maddr=[0m:8555

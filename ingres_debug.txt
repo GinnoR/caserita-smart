@@ -1,0 +1,4 @@
+=== ESTADO DE INGRES_PRODUC ===
+Total de registros en 'ingres_produc': 0
+Muestra:
+[]
