@@ -177,7 +177,7 @@ export function localParse(text: string, catalog: any[]): MatchedItem[] {
         matchFound = {
             amount: NUM_WORDS[m2[1]] || parseFloat(m2[1]),
             unit: m2[3],
-            productName: m2[6].trim(),
+            productName: m2[4].trim(),
             isMoney: m2[3].startsWith("sol")
         };
     }
