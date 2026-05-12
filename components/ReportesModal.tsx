@@ -73,49 +73,49 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
             <div className="bg-slate-50 rounded-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95">
 
                 {/* Header Global */}
-                <div className="bg-slate-800 p-5 text-white flex justify-between items-center shadow-md z-20">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-2 rounded-xl border border-indigo-400">
-                            <BarChart2 className="w-8 h-8 text-white" />
+                <div className="bg-slate-800 p-3 sm:p-5 text-white flex justify-between items-center shadow-md z-20">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-1.5 sm:p-2 rounded-xl border border-indigo-400">
+                            <BarChart2 className="w-5 h-5 sm:w-8 sm:h-8 text-white" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-black flex items-center gap-2">Reportes y Sugerencias</h2>
-                            <p className="text-blue-200 text-sm">Finanzas y analítica de tu negocio</p>
+                            <h2 className="text-lg sm:text-2xl font-black flex items-center gap-2">Reportes y Sugerencias</h2>
+                            <p className="text-blue-200 text-xs sm:text-sm">Finanzas y analítica de tu negocio</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-full transition-colors">
-                        <X className="w-6 h-6" />
+                        <X className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
                 </div>
 
                 {/* Tabs Navigation */}
-                <div className="flex border-b border-slate-200 bg-white shadow-sm z-10 sticky top-0 overflow-x-auto">
+                <div className="flex border-b border-slate-200 bg-white shadow-sm z-10 sticky top-0 overflow-x-auto scrollbar-hide">
                     <button
                         onClick={() => setActiveTab('resumen')}
                         className={cn(
-                            "flex-1 py-4 px-2 font-bold flex items-center justify-center gap-2 border-b-4 transition-colors whitespace-nowrap",
+                            "flex-1 py-3 sm:py-4 px-2 font-bold flex items-center justify-center gap-2 border-b-4 transition-colors whitespace-nowrap text-xs sm:text-base",
                             activeTab === 'resumen' ? "border-blue-500 text-blue-700 bg-blue-50/50" : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                         )}
                     >
-                        <DollarSign className="w-5 h-5" /> Resumen Financiero
+                        <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" /> Resumen
                     </button>
                     <button
                         onClick={() => setActiveTab('tendencias')}
                         className={cn(
-                            "flex-1 py-4 px-2 font-bold flex items-center justify-center gap-2 border-b-4 transition-colors whitespace-nowrap",
+                            "flex-1 py-3 sm:py-4 px-2 font-bold flex items-center justify-center gap-2 border-b-4 transition-colors whitespace-nowrap text-xs sm:text-base",
                             activeTab === 'tendencias' ? "border-purple-500 text-purple-700 bg-purple-50/50" : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                         )}
                     >
-                        <Activity className="w-5 h-5" /> Tendencias
+                        <Activity className="w-4 h-4 sm:w-5 sm:h-5" /> Tendencias
                     </button>
                     <button
                         onClick={() => setActiveTab('sugerencias')}
                         className={cn(
-                            "flex-1 py-4 px-2 font-bold flex items-center justify-center gap-2 border-b-4 transition-colors whitespace-nowrap",
+                            "flex-1 py-3 sm:py-4 px-2 font-bold flex items-center justify-center gap-2 border-b-4 transition-colors whitespace-nowrap text-xs sm:text-base",
                             activeTab === 'sugerencias' ? "border-orange-500 text-orange-700 bg-orange-50/50" : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                         )}
                     >
-                        <Lightbulb className={cn("w-5 h-5", activeTab === 'sugerencias' && "animate-pulse text-yellow-500")} /> Sugerencias IA
+                        <Lightbulb className={cn("w-4 h-4 sm:w-5 sm:h-5", activeTab === 'sugerencias' && "animate-pulse text-yellow-500")} /> Sugerencias IA
                     </button>
                 </div>
 
