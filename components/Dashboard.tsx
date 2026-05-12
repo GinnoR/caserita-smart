@@ -1326,7 +1326,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     }
 
     return (
-        <main style={isMobile ? { height: '100dvh', overflow: 'hidden', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-col h-screen overflow-hidden bg-slate-200'}>
+        <main style={isMobile ? { height: '100dvh', overflow: 'auto', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-col h-screen overflow-hidden bg-slate-200'}>
             <Header onLogout={onLogout} aiMode={aiMode} onModeChange={setAiMode} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} />
 
             {/* Asistente Toast (si hay mensaje) */}
@@ -1507,7 +1507,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     </div>
 
                     {/* Contenido Principal */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '8px', paddingBottom: '80px' }}>
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '8px', paddingBottom: '80px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
                         {activeTab === 'pedidos' && (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative' }}>
                                 {/* VISOR DE COINCIDENCIAS DE VOZ */}
