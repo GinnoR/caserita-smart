@@ -21,6 +21,7 @@ import {
     Database,
     Eye,
     Camera,
+    Sparkles,
 } from "lucide-react";
 
 interface ActionPanelProps {
@@ -158,8 +159,13 @@ export function ActionPanel({
             <div className="grid grid-cols-1 gap-1.5 flex-1">
                 <ActionButton icon={QrCode} label="Mostrar mi QR" onClick={onOpenQR} />
                 <ActionButton icon={MessageCircle} label="WhatsApp Clientes" onClick={onOpenWhatsApp} />
-                <ActionButton icon={PlayCircle} label="Tutoriales" />
-                <ActionButton icon={Lightbulb} label="Tips" />
+                <ActionButton icon={PlayCircle} label="Tutoriales" onClick={() => window.open('/demo', '_blank')} />
+                <ActionButton
+                    icon={Sparkles}
+                    label="Demos AI Studio"
+                    onClick={() => window.open('/demo', '_blank')}
+                    className="border-amber-500/40 bg-amber-950/30 hover:bg-amber-900/40"
+                />
                 <ActionButton
                     icon={BarChart}
                     label="Report. y Sugerencias"

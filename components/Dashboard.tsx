@@ -7,7 +7,7 @@ import { OrderPanel } from "@/components/OrderPanel";
 import { InventoryPanel } from "@/components/InventoryPanel";
 import { ActionPanel } from "@/components/ActionPanel";
 import { PaymentMethods } from "@/components/PaymentMethods";
-import { ShieldAlert, Store, Camera, X, Smartphone, Search, FileText, Share2, UserCheck, Settings, QrCode, Database, MoreHorizontal, PieChart, MessageCircle, BarChart, Eye } from "lucide-react";
+import { ShieldAlert, Store, Camera, X, Smartphone, Search, FileText, Share2, UserCheck, Settings, QrCode, Database, MoreHorizontal, PieChart, MessageCircle, BarChart, Eye, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Footer } from "@/components/Footer";
 import { FiadosModal } from "@/components/FiadosModal";
@@ -1493,6 +1493,11 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         <button onClick={() => setShowReports(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#fbbf24', background: 'none', border: 'none' }}>
                             <BarChart className="w-5 h-5" />
                             <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Report</span>
+                        </button>
+
+                        <button onClick={() => window.open('/demo', '_blank')} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#fbbf24', background: 'none', border: 'none' }}>
+                            <Sparkles className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#fbbf24' }}>Demos AI</span>
                         </button>
 
                         <button onClick={() => setShowSecurityPanel(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#f43f5e', background: 'none', border: 'none' }}>
