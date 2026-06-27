@@ -92,8 +92,8 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
                             <BarChart2 className="w-5 h-5 sm:w-8 sm:h-8 text-white" />
                         </div>
                         <div>
-                            <h2 className="text-lg sm:text-2xl font-black flex items-center gap-2">Reportes y Sugerencias</h2>
-                            <p className="text-blue-200 text-xs sm:text-sm">Finanzas y analítica de tu negocio</p>
+                            <h2 className="text-lg sm:text-2xl font-black flex items-center gap-2">Estado del Negocio</h2>
+                            <p className="text-blue-200 text-xs sm:text-sm">Cómo va el negocio: ganancias, pérdidas y proyecciones</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="hover:bg-white/20 p-2 rounded-full transition-colors">
@@ -119,7 +119,7 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
                             activeTab === 'tendencias' ? "border-purple-500 text-purple-700 bg-purple-50/50" : "border-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-700"
                         )}
                     >
-                        <Activity className="w-4 h-4 sm:w-5 sm:h-5" /> Tendencias
+                        <Activity className="w-4 h-4 sm:w-5 sm:h-5" /> Proyecciones de Ventas
                     </button>
                     <button
                         onClick={() => setActiveTab('sugerencias')}
@@ -164,7 +164,7 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/20 rounded-bl-[100px] -z-0 opacity-50 transition-transform"></div>
                                     <div className="flex justify-between items-start mb-2 relative z-10">
                                         <div>
-                                            <p className="text-slate-400 font-bold text-sm uppercase tracking-wider">Margen Neto</p>
+                                            <p className="text-slate-400 font-bold text-sm uppercase tracking-wider">Ganancias Netas</p>
                                             <div className="flex items-end gap-2 mt-1">
                                                 <h3 className={cn("text-3xl font-black", margenNeto > 15 ? "text-green-400" : margenNeto > 0 ? "text-yellow-400" : "text-red-400")}>
                                                     {margenNeto.toFixed(1)}%
@@ -230,7 +230,7 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-amber-100 rounded-bl-[100px] -z-0 opacity-50 transition-transform"></div>
                                     <div className="flex justify-between items-start mb-2 relative z-10">
                                         <div>
-                                            <p className="text-slate-500 font-bold text-sm uppercase tracking-wider">Cuentas por Cobrar</p>
+                                            <p className="text-slate-500 font-bold text-sm uppercase tracking-wider">Fiaditos en la Calle</p>
                                             <h3 className="text-3xl font-black text-slate-800 mt-1">S/ {cuentasPorCobrar.toFixed(2)}</h3>
                                         </div>
                                         <div className="bg-amber-100 p-2 rounded-xl">
@@ -275,7 +275,7 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-red-100 rounded-bl-[100px] -z-0 opacity-50 transition-transform"></div>
                                     <div className="flex justify-between items-start mb-2 relative z-10">
                                         <div>
-                                            <p className="text-slate-500 font-bold text-sm uppercase tracking-wider">Gastos Oper.</p>
+                                            <p className="text-slate-500 font-bold text-sm uppercase tracking-wider">Pérdidas y Gastos</p>
                                             <h3 className="text-2xl font-black text-slate-800 mt-1">S/ {mockGastosOperativos.toFixed(2)}</h3>
                                         </div>
                                         <div className="bg-red-100 p-2 rounded-xl">
@@ -449,7 +449,7 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
                                 {/* Alerta de Vencimiento */}
                                 <div className="bg-white border-l-4 border-red-500 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
                                     <div className="flex justify-between items-start mb-2">
-                                        <h4 className="font-bold text-slate-800 flex items-center gap-2"><ShieldAlert className="w-4 h-4 text-red-500" /> Riesgo de Vencimiento</h4>
+                                        <h4 className="font-bold text-slate-800 flex items-center gap-2"><ShieldAlert className="w-4 h-4 text-red-500" /> Probable Futura Pérdida</h4>
                                         <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded font-bold">Crítico</span>
                                     </div>
                                     <p className="text-sm text-slate-600 mb-4 line-clamp-2">Detectamos stock de "Yogurt Gloria Fresa" que vencerá en 10 días.</p>
@@ -485,6 +485,27 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
                                     <div className="flex flex-col sm:flex-row gap-4 justify-between items-center sm:items-start text-sm">
                                         <p className="text-slate-600">Tus ventas de <strong>Detergente Bolívar</strong> han subido un 30% esta semana, pero te quedan pocas unidades en inventario para el fin de semana.</p>
                                         <button className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-lg whitespace-nowrap shadow-sm transition-colors w-full sm:w-auto">
+                                            Añadir a Próxima Compra
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Demanda Insatisfecha (Nuevos productos) */}
+                                <div className="bg-white border-l-4 border-purple-500 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow md:col-span-2">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h4 className="font-bold text-slate-800 flex items-center gap-2"><Lightbulb className="w-4 h-4 text-purple-500" /> Oportunidad de Nuevos Productos</h4>
+                                        <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold">Ventas Perdidas</span>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row gap-4 justify-between items-center sm:items-start text-sm">
+                                        <div className="text-slate-600">
+                                            <p className="mb-2">El Asistente de Voz registró clientes pidiendo estos productos que <strong>NO vendes actualmente</strong>:</p>
+                                            <ul className="list-disc pl-5 space-y-1">
+                                                <li><strong>Pilas Energizer AA</strong> (Pedidas 4 veces esta semana)</li>
+                                                <li><strong>Comida para Gatos Whiskas</strong> (Pedida 2 veces)</li>
+                                                <li><strong>Gaseosa Guaraná 3L</strong> (Pedida 2 veces)</li>
+                                            </ul>
+                                        </div>
+                                        <button className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg whitespace-nowrap shadow-sm transition-colors w-full sm:w-auto">
                                             Añadir a Próxima Compra
                                         </button>
                                     </div>
