@@ -1,4 +1,4 @@
-import { User, LogOut, ShoppingCart, Sparkles, Cloud, CloudOff, RefreshCcw, ShieldAlert } from 'lucide-react';
+import { User, LogOut, ShoppingCart, Sparkles, Cloud, CloudOff, RefreshCcw, ShieldAlert, HelpCircle } from 'lucide-react';
 import { AIMode } from './Dashboard';
 import { PanicButton } from './PanicButton';
 import { cn } from "@/lib/utils";
@@ -12,9 +12,10 @@ interface HeaderProps {
     isSyncing?: boolean;
     isSirenActive?: boolean;
     onTriggerPanic?: () => void;
+    onOpenFAQ?: () => void;
 }
 
-export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombre, isOnline = true, isSyncing = false, isSirenActive = false, onTriggerPanic }: HeaderProps) {
+export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombre, isOnline = true, isSyncing = false, isSirenActive = false, onTriggerPanic, onOpenFAQ }: HeaderProps) {
     return (
         <header className="flex flex-col px-4 py-3 bg-[#1e3a8a] shadow-2xl border-b border-blue-800 gap-3 relative z-50">
             {/* Row 1: Title & Panic */}
@@ -73,6 +74,15 @@ export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombr
                             className="bg-[#1e293b]/60 text-blue-100 px-3 py-2 rounded-lg flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter border border-white/10"
                         >
                             <Sparkles className="w-3 h-3" /> Asistente IA
+                        </button>
+                    )}
+
+                    {onOpenFAQ && (
+                        <button
+                            onClick={onOpenFAQ}
+                            className="bg-emerald-600/80 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter border border-emerald-400/30 shadow-lg hover:bg-emerald-500 transition-colors"
+                        >
+                            <HelpCircle className="w-3 h-3" /> Ayuda
                         </button>
                     )}
 

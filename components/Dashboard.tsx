@@ -20,6 +20,7 @@ import { ReportesModal } from "@/components/ReportesModal";
 import { FastScannerModal } from "@/components/FastScannerModal";
 import { LiveMonitorModal } from "@/components/LiveMonitorModal";
 import { PromotionsModal } from "@/components/PromotionsModal";
+import { AssistantFAQModal } from "@/components/AssistantFAQModal";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { usePanicMode } from "@/hooks/usePanicMode";
 import { useExportReport } from "@/hooks/useExportReport";
@@ -90,6 +91,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const [showLiveMonitor, setShowLiveMonitor] = useState(false);
     const [showPromotions, setShowPromotions] = useState(false);
     const [showSecurityPanel, setShowSecurityPanel] = useState(false);
+    const [showFAQ, setShowFAQ] = useState(false);
     const [dailySummary, setDailySummary] = useState<DailySummary>({
         efectivo: 0,
         yape: 0,
@@ -1549,7 +1551,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
     return (
         <main style={isMobile ? { height: '100dvh', overflow: 'auto', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-col h-screen overflow-hidden bg-slate-200'}>
-            <Header onLogout={onLogout} aiMode={aiMode} onModeChange={setAiMode} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} />
+            <Header onLogout={onLogout} aiMode={aiMode} onModeChange={setAiMode} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} onOpenFAQ={() => setShowFAQ(true)} />
 
             {/* ONBOARDING GUIDE — only for new users */}
             {showOnboarding && userId && (
@@ -1963,6 +1965,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             <ReportesModal isOpen={showReports} onClose={() => setShowReports(false)} sales={sales} compras={[]} gastos={[]} customers={customers} inventory={inventory} />
             <LiveMonitorModal isOpen={showLiveMonitor} onClose={() => setShowLiveMonitor(false)} userId={userId || ""} />
             <SecurityPanel isOpen={showSecurityPanel} onClose={() => setShowSecurityPanel(false)} />
+            <AssistantFAQModal isOpen={showFAQ} onClose={() => setShowFAQ(false)} speak={speak} />
 
             {/* MODAL DE SELECCIÓN DE COMPROBANTE - v4.0 */}
             {showReceiptModal && (
