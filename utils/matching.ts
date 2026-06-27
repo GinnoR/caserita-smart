@@ -69,7 +69,7 @@ export function findBestProductMatch(queryText: string, catalog: any[]) {
                 score += 10;
                 if (productNameWords[0] === qw) score += 5;
                 if (criticalWords.includes(qw)) score += 15;
-            } else if (productNameWords.some((pw: string) => pw.startsWith(qw))) {
+            } else if (productNameWords.some((pw: string) => pw.startsWith(qw) || qw.startsWith(pw))) {
                 score += 5;
             }
         }
@@ -117,7 +117,7 @@ export function getTopProductMatches(queryText: string, catalog: any[], limit: n
                 score += 10;
                 if (productNameWords[0] === qw) score += 5;
                 if (criticalWords.includes(qw)) score += 15;
-            } else if (productNameWords.some((pw: string) => pw.startsWith(qw))) {
+            } else if (productNameWords.some((pw: string) => pw.startsWith(qw) || qw.startsWith(pw))) {
                 score += 5;
             }
         }

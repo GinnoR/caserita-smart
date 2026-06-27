@@ -412,7 +412,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 'dónde', 'donde', 'ubicación', 'ubicacion', 'stock', 
                 'cuánto', 'cuanto', 'cuánta', 'cuanta', 'cuesta', 
                 'cambiar', 'cambia', 'pon', 'vence', 'caducidad', 
-                'cantidad', 'existe', 'tengo', 'tenemos', 'hay', 'queda', 'quedan', 'inventario'
+                'cantidad', 'existe', 'tengo', 'tenemos', 'hay', 'queda', 'quedan', 'inventario', 'tienen', 'habrá', 'habra', 'vendes'
             ];
             const isAssistantQuery = assistantKeywords.some(k => text.toLowerCase().includes(k));
 
@@ -730,7 +730,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         }
 
         // 2. Stock: "¿Cuánto me queda?" o "¿Tenemos papa?"
-        if (["queda", "quedan", "stock", "tengo", "tenemos", "hay", "inventario", "cantidad", "existe"].some(k => query.includes(k))) {
+        if (["queda", "quedan", "stock", "tengo", "tenemos", "tienen", "hay", "habrá", "habra", "vendes", "inventario", "cantidad", "existe"].some(k => query.includes(k))) {
             const product = findBestProductMatch(query);
             if (product) {
                 const stockQty = product.stock ?? 0;
