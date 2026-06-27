@@ -48,7 +48,12 @@ export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombr
                 {onModeChange && (
                     <button
                         onClick={() => onModeChange('pedidos')}
-                        className="bg-[#f97316] text-white px-4 py-2 rounded-lg flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tighter shadow-xl"
+                        className={cn(
+                            "px-4 py-2 rounded-lg flex items-center gap-1.5 text-[10px] font-black uppercase tracking-tighter shadow-xl transition-all",
+                            aiMode === 'pedidos' 
+                                ? "bg-[#f97316] text-white ring-2 ring-orange-400 ring-offset-1 ring-offset-[#1e3a8a] scale-105" 
+                                : "bg-[#1e293b]/60 text-slate-400 hover:bg-[#1e293b] hover:text-white"
+                        )}
                     >
                         <ShoppingCart className="w-3 h-3" /> Toma de Pedidos
                     </button>
@@ -71,7 +76,12 @@ export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombr
                     {onModeChange && (
                         <button
                             onClick={() => onModeChange('asistente')}
-                            className="bg-[#1e293b]/60 text-blue-100 px-3 py-2 rounded-lg flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter border border-white/10"
+                            className={cn(
+                                "px-3 py-2 rounded-lg flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter border transition-all",
+                                aiMode === 'asistente'
+                                    ? "bg-purple-600 text-white border-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.6)] ring-2 ring-purple-400 ring-offset-1 ring-offset-[#172554] scale-105"
+                                    : "bg-[#1e293b]/60 text-slate-400 border-white/10 hover:bg-[#1e293b] hover:text-white"
+                            )}
                         >
                             <Sparkles className="w-3 h-3" /> Asistente IA
                         </button>

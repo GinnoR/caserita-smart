@@ -109,6 +109,20 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         productId: string | number;
         productName: string;
     } | null>(null);
+
+    const handleModeChange = (mode: AIMode) => {
+        setAiMode(mode);
+        if (mode === 'asistente') {
+            speak("Modo Asistente IA activado. Dime en qué te puedo ayudar.");
+            setAssistantResponse("MODO ASISTENTE ACTIVADO. Pregúntame sobre precios, stock o vencimientos.");
+        } else {
+            speak("Modo de Toma de Pedidos activado.");
+            setAssistantResponse("MODO PEDIDOS ACTIVADO. Dicta los productos a vender.");
+        }
+        // Clear message after 3 seconds
+        setTimeout(() => setAssistantResponse(null), 3000);
+    };
+
     const [assistantResponse, setAssistantResponse] = useState<string | null>(null);
     const { triggerPanicAction, isSirenActive, stopSiren: stopPanicSiren } = usePanicMode('auxilio');
 
@@ -1557,7 +1571,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
     return (
         <main style={isMobile ? { height: '100dvh', overflow: 'auto', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-col h-screen overflow-hidden bg-slate-200'}>
-            <Header onLogout={onLogout} aiMode={aiMode} onModeChange={setAiMode} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} onOpenFAQ={() => setShowFAQ(true)} />
+            <Header onLogout={onLogout} aiMode={aiMode} onModeChange={handleModeChange} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} onOpenFAQ={() => setShowFAQ(true)} />
 
             {/* ONBOARDING GUIDE — only for new users */}
             {showOnboarding && userId && (
@@ -1700,7 +1714,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         <div className="absolute bottom-8 left-8 flex flex-col gap-4 z-50">
                              <button
                                 onClick={() => { if (isListening) stopListening(); else startListening(); }}
-                                className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-[#1f5f36] hover:bg-[#2a7a48]'} hover:scale-110 active:scale-95`}
+                                className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : (aiMode === 'asistente' ? 'bg-purple-600 hover:bg-purple-700 shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'bg-[#1f5f36] hover:bg-[#2a7a48]')} hover:scale-110 active:scale-95`}
                              >
                                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                              </button>
@@ -1925,10 +1939,13 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
             {/* Voice Status & Transcript Overlay */}
             {isListening && (
-                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-black/80 text-white px-6 py-3 rounded-full flex items-center gap-3 z-50 animate-pulse border-2 border-red-500">
-                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                <div className={cn(
+                    "fixed bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-3 rounded-full flex items-center gap-3 z-50 animate-pulse border-2 shadow-xl",
+                    aiMode === 'asistente' ? "bg-purple-900/90 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]" : "bg-black/80 border-red-500"
+                )}>
+                    <div className={cn("w-3 h-3 rounded-full shadow-inner", aiMode === 'asistente' ? "bg-purple-400" : "bg-red-500")}></div>
                     <span className="font-medium text-lg">
-                        {interimTranscript || "Escuchando..."}
+                        {interimTranscript || (aiMode === 'asistente' ? "Asistente Escuchando..." : "Escuchando...")}
                     </span>
                 </div>
             )}
