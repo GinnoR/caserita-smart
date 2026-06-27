@@ -18,6 +18,10 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "Caserita Smart",
   },
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
   formatDetection: {
     telephone: false,
   },
