@@ -111,6 +111,11 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     } | null>(null);
 
     const handleModeChange = (mode: AIMode) => {
+        // Detener micrófono para que la IA no se escuche a sí misma al hablar
+        if (isListening) {
+            stopListening();
+        }
+        
         setAiMode(mode);
         if (mode === 'asistente') {
             speak("Modo Asistente IA activado. Dime en qué te puedo ayudar.");
