@@ -75,7 +75,7 @@ export function Header({ onLogout, aiMode = 'pedidos', onModeChange, cajeroNombr
                 <div className="flex items-center gap-1.5">
                     {onModeChange && (
                         <button
-                            onClick={() => onModeChange('asistente')}
+                            onClick={() => onModeChange(aiMode === 'asistente' ? 'pedidos' : 'asistente')}
                             className={cn(
                                 "px-3 py-2 rounded-lg flex items-center gap-1.5 text-[9px] font-black uppercase tracking-tighter border transition-all",
                                 aiMode === 'asistente'

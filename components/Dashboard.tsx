@@ -408,7 +408,12 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
             // --- MODO PEDIDOS (Default) ---
             // Redirección inteligente: si parece una pregunta o comando de asistente, manejarlo como tal
-            const assistantKeywords = ['dónde', 'donde', 'ubicación', 'ubicacion', 'stock', 'cuánto', 'cuanto', 'cuánta', 'cuanta', 'cuesta', 'cambiar', 'cambia', 'pon', 'vence', 'caducidad', 'cantidad', 'existe'];
+            const assistantKeywords = [
+                'dónde', 'donde', 'ubicación', 'ubicacion', 'stock', 
+                'cuánto', 'cuanto', 'cuánta', 'cuanta', 'cuesta', 
+                'cambiar', 'cambia', 'pon', 'vence', 'caducidad', 
+                'cantidad', 'existe', 'tengo', 'tenemos', 'hay', 'queda', 'quedan', 'inventario'
+            ];
             const isAssistantQuery = assistantKeywords.some(k => text.toLowerCase().includes(k));
 
             if (isAssistantQuery) {
@@ -724,8 +729,8 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             return;
         }
 
-        // 2. Stock: "¿Cuánto me queda?"
-        if (["queda", "quedan", "stock", "tengo", "hay", "inventario", "cantidad", "existe"].some(k => query.includes(k))) {
+        // 2. Stock: "¿Cuánto me queda?" o "¿Tenemos papa?"
+        if (["queda", "quedan", "stock", "tengo", "tenemos", "hay", "inventario", "cantidad", "existe"].some(k => query.includes(k))) {
             const product = findBestProductMatch(query);
             if (product) {
                 const stockQty = product.stock ?? 0;
