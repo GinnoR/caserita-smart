@@ -10,9 +10,10 @@ interface ReportesModalProps {
     gastos: any[];
     customers?: any[]; // added for "Cuentas por Cobrar" calculation
     inventory?: any[]; // added for "Inventario Valorizado" calculation
+    unmetDemand?: string[];
 }
 
-export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gastos = [], customers = [], inventory = [] }: ReportesModalProps) {
+export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gastos = [], customers = [], inventory = [], unmetDemand = [] }: ReportesModalProps) {
     const [activeTab, setActiveTab] = useState<'resumen' | 'tendencias' | 'sugerencias'>('resumen');
     const [dateRange, setDateRange] = useState<'today' | 'week' | 'month'>('month');
 
@@ -497,17 +498,28 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
                                         <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded font-bold">Ventas Perdidas</span>
                                     </div>
                                     <div className="flex flex-col sm:flex-row gap-4 justify-between items-center sm:items-start text-sm">
-                                        <div className="text-slate-600">
-                                            <p className="mb-2">El Asistente de Voz registró clientes pidiendo estos productos que <strong>NO vendes actualmente</strong>:</p>
-                                            <ul className="list-disc pl-5 space-y-1">
-                                                <li><strong>Pilas Energizer AA</strong> (Pedidas 4 veces esta semana)</li>
-                                                <li><strong>Comida para Gatos Whiskas</strong> (Pedida 2 veces)</li>
-                                                <li><strong>Gaseosa Guaraná 3L</strong> (Pedida 2 veces)</li>
-                                            </ul>
+                                        <div className="text-slate-600 w-full">
+                                            {unmetDemand.length > 0 ? (
+                                                <>
+                                                    <p className="mb-2">El Asistente de Voz registró clientes pidiendo estos productos que <strong>NO vendes actualmente</strong>:</p>
+                                                    <ul className="list-disc pl-5 space-y-1">
+                                                        {unmetDemand.map((item, idx) => (
+                                                            <li key={idx}><strong>{item}</strong></li>
+                                                        ))}
+                                                    </ul>
+                                                </>
+                                            ) : (
+                                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-100 text-center">
+                                                    <p className="font-bold text-slate-700 mb-1">¡Todo bajo control!</p>
+                                                    <p className="text-xs">No hay registros de demanda insatisfecha por ahora. El asistente registrará aquí si algún cliente pide algo que no tienes.</p>
+                                                </div>
+                                            )}
                                         </div>
-                                        <button className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg whitespace-nowrap shadow-sm transition-colors w-full sm:w-auto">
-                                            Añadir a Próxima Compra
-                                        </button>
+                                        {unmetDemand.length > 0 && (
+                                            <button className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg whitespace-nowrap shadow-sm transition-colors w-full sm:w-auto">
+                                                Añadir a Próxima Compra
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

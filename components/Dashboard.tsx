@@ -92,6 +92,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const [showPromotions, setShowPromotions] = useState(false);
     const [showSecurityPanel, setShowSecurityPanel] = useState(false);
     const [showFAQ, setShowFAQ] = useState(false);
+    const [unmetDemand, setUnmetDemand] = useState<string[]>([]);
     const [dailySummary, setDailySummary] = useState<DailySummary>({
         efectivo: 0,
         yape: 0,
@@ -913,7 +914,12 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 speak(msg);
                 setAssistantResponse(msg);
             });
-            // Mantener registro de no encontrados
+            // Mantener registro de no encontrados para la vista de "Oportunidad de Nuevos Productos"
+            setUnmetDemand(prev => {
+                const newDemands = data.notFound.filter((item: string) => !prev.includes(item));
+                return [...prev, ...newDemands];
+            });
+            // Mantener registro en pendientes (deprecated visualmente, pero mantenemos por compatibilidad)
             setPendingOrders(prev => [...prev, {
                 cliente_nombre: "No encontrado",
                 monto_total: 0,
@@ -1962,7 +1968,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             <ProveedoresModal isOpen={showProveedores} onClose={() => setShowProveedores(false)} inventory={inventory} userId={userId} />
             <ProductMasterModal isOpen={showMaster} onClose={() => setShowMaster(false)} inventory={inventory} setInventory={setInventory} isOwner={isOwner} userId={userId} />
             <FastScannerModal isOpen={showScanner} onClose={() => setShowScanner(false)} inventory={inventory} setInventory={setInventory} onAddToCart={addItemsToCart} userId={userId} cajeroNombre={cajeroNombre} />
-            <ReportesModal isOpen={showReports} onClose={() => setShowReports(false)} sales={sales} compras={[]} gastos={[]} customers={customers} inventory={inventory} />
+            <ReportesModal isOpen={showReports} onClose={() => setShowReports(false)} sales={sales} compras={[]} gastos={[]} customers={customers} inventory={inventory} unmetDemand={unmetDemand} />
             <LiveMonitorModal isOpen={showLiveMonitor} onClose={() => setShowLiveMonitor(false)} userId={userId || ""} />
             <SecurityPanel isOpen={showSecurityPanel} onClose={() => setShowSecurityPanel(false)} />
             <AssistantFAQModal isOpen={showFAQ} onClose={() => setShowFAQ(false)} speak={speak} />
