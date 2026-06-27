@@ -30,7 +30,7 @@ const SLANG_WORDS: Record<string, number> = {
     "un centimo": 0.01
 };
 
-const STOP_WORDS = ['de', 'en', 'la', 'el', 'los', 'las', 'para', 'un', 'una', 'con'];
+const STOP_WORDS = ['de', 'en', 'la', 'el', 'los', 'las', 'para', 'un', 'una', 'con', 'por', 'a'];
 // Note: "con" is removed from stopWords in the actual search logic if gas is involved, 
 // but for general orders we keep it limited.
 
@@ -178,7 +178,7 @@ export function localParse(text: string, catalog: any[]): MatchedItem[] {
             amount: NUM_WORDS[m2[1]] || parseFloat(m2[1]),
             unit: m2[3],
             productName: m2[4].trim(),
-            isMoney: m2[3].startsWith("sol")
+            isMoney: m2[3].startsWith("sol") || m2[3].startsWith("cent") || m2[3].startsWith("cént")
         };
     }
 
@@ -190,7 +190,7 @@ export function localParse(text: string, catalog: any[]): MatchedItem[] {
                 amount: NUM_WORDS[m1[2]] || parseFloat(m1[2]),
                 unit: m1[4],
                 productName: m1[1].trim(),
-                isMoney: m1[4].startsWith("sol")
+                isMoney: m1[4].startsWith("sol") || m1[4].startsWith("cent") || m1[4].startsWith("cént")
             };
         }
     }
@@ -210,7 +210,7 @@ export function localParse(text: string, catalog: any[]): MatchedItem[] {
 
     if (matchFound && !isNaN(matchFound.amount)) {
         // Handle plurals basic cleanup for search (aceites -> aceite)
-        let searchName = matchFound.productName;
+        let searchName = matchFound.productName.replace(/^(por|a|de)\s+/i, '').replace(/\s+(por|a|de)$/i, '');
         if (searchName.endsWith('s') && searchName.length > 4) {
             searchName = searchName.slice(0, -1);
         }
@@ -219,6 +219,20 @@ export function localParse(text: string, catalog: any[]): MatchedItem[] {
         if (product) {
             let qty = matchFound.amount;
             let subtotal = qty * product.price;
+
+            // Determinar la Unidad de Medida (UM) correcta
+            let finalUm = product.um && product.um.trim() !== '' ? product.um : 'und';
+            
+            // Si el usuario dicta "kilos" o "kg", forzamos a KG (ignorar si es isMoney porque ahi dice "soles")
+            if (!matchFound.isMoney && ['kilos', 'kilo', 'kg', 'gramos', 'gramo'].includes(matchFound.unit.toLowerCase())) {
+                finalUm = matchFound.unit.toLowerCase().startsWith('gram') ? 'gr' : 'kg';
+            } else if (finalUm.toLowerCase() === 'und') {
+                // Inferir por nombre para productos clásicos a granel
+                const kgKeywords = ["papa", "yuca", "tomate", "cebolla", "camote", "limón", "limon", "zanahoria", "vainita", "uva", "manzana", "granel"];
+                if (kgKeywords.some(kw => product.name.toLowerCase().includes(kw))) {
+                    finalUm = 'kg';
+                }
+            }
 
             if (matchFound.isMoney) {
                 if (matchFound.unit.includes("centimo") || matchFound.unit.includes("céntimo")) {
@@ -229,7 +243,7 @@ export function localParse(text: string, catalog: any[]): MatchedItem[] {
                 // --- REGLA GINNO: NO FRACCIONES EN BULTOS (Salvo GRANEL) ---
                 const isBulk = product.unidades_base > 1;
                 const isGranel = product.name.toLowerCase().includes("granel") || 
-                                (product.um && product.um.toLowerCase() === 'kg' && !isBulk);
+                                (finalUm.toLowerCase() === 'kg' && !isBulk);
                 
                 // Si es bulto y el resultado no es entero (con margen de error pequeño)
                 if (isBulk && !isGranel) {
@@ -244,7 +258,7 @@ export function localParse(text: string, catalog: any[]): MatchedItem[] {
                     code: product.code,
                     name: product.name,
                     qty: isBulk ? Math.round(actualQty) : parseFloat(actualQty.toFixed(3)),
-                    um: product.um || 'und',
+                    um: finalUm.toUpperCase(),
                     price: product.price,
                     subtotal: parseFloat(qty.toFixed(2)),
                     targetSoles: qty
@@ -255,7 +269,7 @@ export function localParse(text: string, catalog: any[]): MatchedItem[] {
                 code: product.code,
                 name: product.name,
                 qty: parseFloat(qty.toFixed(3)),
-                um: product.um || 'und',
+                um: finalUm.toUpperCase(),
                 price: product.price,
                 subtotal: parseFloat(subtotal.toFixed(2))
             }];

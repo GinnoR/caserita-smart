@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grabadora de Pantalla Personal</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e2f;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #2a2a40;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            margin-top: 0;
+            color: #4ade80;
+        }
+        p {
+            color: #a0a0b8;
+            margin-bottom: 20px;
+        }
+        .video-container {
+            width: 100%;
+            height: 300px;
+            background-color: #000;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #startBtn {
+            background-color: #3b82f6;
+            color: white;
+        }
+        #startBtn:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+        #stopBtn {
+            background-color: #ef4444;
+            color: white;
+        }
+        #stopBtn:hover:not(:disabled) {
+            background-color: #dc2626;
+        }
+        #downloadBtn {
+            background-color: #10b981;
+            color: white;
+            display: none;
+        }
+        #downloadBtn:hover {
+            background-color: #059669;
+        }
+        .options {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #4ade80;
+        }
+        .status {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #ef4444;
+            min-height: 24px;
+        }
+        .blink {
+            animation: blinker 1.5s linear infinite;
+        }
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Grabadora de Pantalla</h1>
+        <p>Tu herramienta personal, gratuita y sin marcas de agua.</p>
+
+        <div class="options">
+            <label>
+                <input type="checkbox" id="audioToggle" checked>
+                Capturar también el micrófono
+            </label>
+        </div>
+
+        <div class="video-container">
+            <video id="preview" autoplay muted></video>
+        </div>
+
+        <div class="controls">
+            <button id="startBtn">⏺ Iniciar Grabación</button>
+            <button id="stopBtn" disabled>⏹ Detener</button>
+            <a id="downloadBtn" download="Grabacion_Personal.webm" style="text-decoration: none;">
+                <button>⬇️ Descargar Video</button>
+            </a>
+        </div>
+
+        <div class="status" id="statusText"></div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let recordedChunks = [];
+        let stream;
+
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const preview = document.getElementById('preview');
+        const audioToggle = document.getElementById('audioToggle');
+        const statusText = document.getElementById('statusText');
+
+        startBtn.addEventListener('click', async () => {
+            try {
+                recordedChunks = [];
+                downloadBtn.style.display = 'none';
+
+                // Configurar qué vamos a grabar
+                const displayMediaOptions = {
+                    video: { cursor: "always" },
+                    audio: true // Audio del sistema si el usuario lo permite
+                };
+
+                // Capturar pantalla
+                stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+
+                // Si el usuario quiere micrófono, agregarlo al stream
+                if (audioToggle.checked) {
+                    try {
+                        const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        audioStream.getAudioTracks().forEach(track => {
+                            stream.addTrack(track);
+                        });
+                    } catch (e) {
+                        console.warn("No se pudo acceder al micrófono:", e);
+                        alert("No se pudo acceder al micrófono. Grabando sin micrófono.");
+                    }
+                }
+
+                // Mostrar en la pantalla (preview)
+                preview.srcObject = stream;
+
+                // Configurar el recorder
+                const options = { mimeType: 'video/webm; codecs=vp9,opus' };
+                mediaRecorder = new MediaRecorder(stream, options);
+
+                mediaRecorder.ondataavailable = function(e) {
+                    if (e.data.size > 0) {
+                        recordedChunks.push(e.data);
+                    }
+                };
+
+                mediaRecorder.onstop = function() {
+                    const blob = new Blob(recordedChunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    // Configurar el botón de descarga
+                    downloadBtn.href = url;
+                    downloadBtn.download = `Grabacion_${new Date().toISOString().slice(0, 10)}.webm`;
+                    downloadBtn.style.display = 'block';
+                    
+                    // Detener preview
+                    preview.srcObject = null;
+                    
+                    // Restaurar UI
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                    statusText.textContent = "Grabación finalizada. Lista para descargar.";
+                    statusText.classList.remove('blink');
+                };
+
+                // Si el usuario detiene desde el botón nativo del navegador "Dejar de compartir"
+                stream.getVideoTracks()[0].onended = function () {
+                    if(mediaRecorder.state !== "inactive") {
+                        mediaRecorder.stop();
+                    }
+                };
+
+                mediaRecorder.start();
+                
+                // Actualizar UI
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                statusText.textContent = "🔴 Grabando...";
+                statusText.classList.add('blink');
+
+            } catch (err) {
+                console.error("Error al iniciar grabación: ", err);
+                if (err.name !== 'NotAllowedError') {
+                    alert("Ocurrió un error al intentar grabar la pantalla.");
+                }
+            }
+        });
+
+        stopBtn.addEventListener('click', () => {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+            }
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>

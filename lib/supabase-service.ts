@@ -201,10 +201,13 @@ export const supabaseService = {
 
         for (const item of details) {
             try {
-                // 1. Obtener stock actual
+                // 1. Obtener stock actual y factor de conversión del catálogo maestro
                 const { data, error } = await supabase
                     .from('ingres_produc')
-                    .select('cantidad_ingreso')
+                    .select(`
+                        cantidad_ingreso,
+                        inventario (unidades_base)
+                    `)
                     .eq('cod_casero', codCasero)
                     .eq('producto_id', item.producto_id)
                     .single();
@@ -215,7 +218,9 @@ export const supabaseService = {
                 }
 
                 if (data) {
-                    const nuevoStock = Math.max(0, (data.cantidad_ingreso || 0) - item.cantidad);
+                    const unidadesBase = (data.inventario as any)?.unidades_base || 1;
+                    const cantidadADescontar = item.cantidad * unidadesBase;
+                    const nuevoStock = Math.max(0, (data.cantidad_ingreso || 0) - cantidadADescontar);
                     
                     // 2. Actualizar stock
                     const { error: updError } = await supabase
@@ -227,7 +232,7 @@ export const supabaseService = {
                     if (updError) {
                         console.error(`[Supabase] Error al actualizar stock para producto ${item.producto_id}:`, updError.message);
                     } else {
-                        console.log(`[Supabase] Stock actualizado para ${item.producto_id}: ${data.cantidad_ingreso} -> ${nuevoStock}`);
+                        console.log(`[Supabase] Stock actualizado para ${item.producto_id} (factor: ${unidadesBase}): ${data.cantidad_ingreso} -> ${nuevoStock}`);
                     }
                 }
             } catch (e) {
@@ -250,6 +255,73 @@ export const supabaseService = {
             return data || [];
         } catch (e) {
             return [];
+        }
+    },
+
+    // ============================================================
+    // Módulo: Proveedores
+    // ============================================================
+
+    async getSuppliers(codCasero: string): Promise<any[]> {
+        if (!isSupabaseConfigured() || !codCasero) return [];
+        try {
+            const { data, error } = await supabase
+                .from('proveedores')
+                .select('*')
+                .eq('cod_casero', codCasero)
+                .order('name', { ascending: true });
+            
+            if (error) throw error;
+            return data || [];
+        } catch (e) {
+            console.error('[Supabase] Error cargando proveedores:', e);
+            return [];
+        }
+    },
+
+    async createSupplier(supplier: any): Promise<any> {
+        if (!isSupabaseConfigured()) return null;
+        try {
+            const { data, error } = await supabase
+                .from('proveedores')
+                .insert(supplier)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        } catch (e) {
+            console.error('[Supabase] Error creando proveedor:', e);
+            return null;
+        }
+    },
+
+    async updateSupplier(id: number, updates: any): Promise<boolean> {
+        if (!isSupabaseConfigured()) return false;
+        try {
+            const { error } = await supabase
+                .from('proveedores')
+                .update(updates)
+                .eq('id', id);
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('[Supabase] Error actualizando proveedor:', e);
+            return false;
+        }
+    },
+
+    async deleteSupplier(id: number): Promise<boolean> {
+        if (!isSupabaseConfigured()) return false;
+        try {
+            const { error } = await supabase
+                .from('proveedores')
+                .delete()
+                .eq('id', id);
+            if (error) throw error;
+            return true;
+        } catch (e) {
+            console.error('[Supabase] Error eliminando proveedor:', e);
+            return false;
         }
     },
 
@@ -569,6 +641,106 @@ export const supabaseService = {
             return !error;
         } catch { return false; }
     },
+
+    // ============================================================
+    // Módulo: Facturación, Gastos y Maestro Masivo
+    // ============================================================
+    async saveProductMaster(codCasero: string, items: any[]): Promise<boolean> {
+        if (!isSupabaseConfigured()) return true;
+        try {
+            // Upsert in 'inventario' first
+            const masterPayload = items.map(i => ({
+                cod_bar_produc: i.code,
+                nombre_producto: i.name,
+                um: i.um || 'und',
+                unidades_base: i.unidades_base || 1,
+                ubicacion: i.ubicacion || ''
+            }));
+            const { data: invData, error: invError } = await supabase.from('inventario').upsert(masterPayload, { onConflict: 'cod_bar_produc' }).select('id, cod_bar_produc');
+            if (invError) throw invError;
+
+            // Upsert in 'ingres_produc' mapping cod_bar_produc to inventario_id
+            const ingresPayload = items.map(i => {
+                const matchedInv = invData?.find(d => d.cod_bar_produc === i.code);
+                return {
+                    cod_casero: codCasero,
+                    inventario_id: matchedInv?.id,
+                    cantidad_ingreso: i.stock,
+                    p_u_venta: i.price,
+                    p_u_compra: i.price * 0.8 // Dummy cost if not provided
+                };
+            }).filter(i => i.inventario_id);
+
+            // Since ingres_produc doesn't have a unique constraint on (cod_casero, inventario_id) by default in our mock schema, 
+            // we will just insert them for now (or bulk upsert if unique constraint exists).
+            const { error: ingError } = await supabase.from('ingres_produc').upsert(ingresPayload);
+            return !ingError;
+        } catch (e) {
+            console.error('saveProductMaster error:', e);
+            return false;
+        }
+    },
+
+    async getGastos(codCasero: string): Promise<any[]> {
+        if (!isSupabaseConfigured()) return [];
+        try {
+            const { data, error } = await supabase
+                .from('gastos_operativos')
+                .select('*')
+                .eq('cod_casero', codCasero)
+                .order('fecha', { ascending: false });
+            if (error) throw error;
+            return data || [];
+        } catch (e) {
+            console.error('getGastos error:', e);
+            return [];
+        }
+    },
+
+    async saveGasto(codCasero: string, gasto: any): Promise<boolean> {
+        if (!isSupabaseConfigured()) return true;
+        try {
+            const { error } = await supabase.from('gastos_operativos').insert({
+                cod_casero: codCasero,
+                concepto: gasto.concept,
+                monto: parseFloat(gasto.amount),
+                categoria: gasto.cat,
+                fecha: gasto.date
+            });
+            return !error;
+        } catch (e) {
+            console.error('saveGasto error:', e);
+            return false;
+        }
+    },
+
+    // ============================================================
+    // Módulo: Sistema de Pánico
+    // ============================================================
+    async recordPanicIncident(codCasero: string, tipoIncidente: string, descripcion: string, esSilencioso: boolean, latitud?: number, longitud?: number): Promise<boolean> {
+        if (!isSupabaseConfigured()) {
+            console.log('[Supabase] Mock: Incidente de pánico registrado', { tipoIncidente, descripcion, esSilencioso, latitud, longitud });
+            return true;
+        }
+        try {
+            const { error } = await supabase.from('panic_incidents').insert({
+                cod_casero: codCasero,
+                tipo_incidente: tipoIncidente,
+                descripcion: descripcion,
+                es_silencioso: esSilencioso,
+                latitud: latitud || null,
+                longitud: longitud || null
+            });
+            if (error) {
+                console.error('[Supabase] Error al registrar incidente de pánico:', error.message);
+                return false;
+            }
+            return true;
+        } catch (e) {
+            console.error('[Supabase] Excepción al registrar incidente de pánico:', e);
+            return false;
+        }
+    }
 };
 
 // ============================================================

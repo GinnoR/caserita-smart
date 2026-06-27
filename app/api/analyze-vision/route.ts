@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
         // Remove the data:image/jpeg;base64, part if present
         const base64Data = image.split(",")[1] || image;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         const prompt = `
 Eres un sistema de Inteligencia Artificial de seguridad para una bodega llamada "Caserita Smart".

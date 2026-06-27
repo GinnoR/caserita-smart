@@ -20,6 +20,36 @@ export function ProductMasterModal({ isOpen, onClose, inventory, setInventory, i
 
     const [search, setSearch] = useState("");
     const [editingItem, setEditingItem] = useState<any>(null);
+    const [uploading, setUploading] = useState(false);
+    const [showBulk, setShowBulk] = useState(false);
+    const [bulkText, setBulkText] = useState("");
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        if (file.size > 1024 * 1024) {
+            alert("La imagen excede el límite de 1MB. Por favor, elige una imagen más ligera (JPG, PNG o WEBP).");
+            return;
+        }
+        
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId || 'admin'}_${Date.now()}.${fileExt}`;
+        
+        setUploading(true);
+        try {
+            const { error } = await supabase.storage.from('product-images').upload(fileName, file);
+            if (error) throw error;
+            const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(fileName);
+            
+            setEditingItem({ ...editingItem, custom_image_url: urlData.publicUrl });
+        } catch (err: any) {
+            console.error("Error al subir imagen", err);
+            alert("Hubo un error al subir la imagen. Verifica que el bucket 'product-images' exista y sea público.");
+        } finally {
+            setUploading(false);
+        }
+    };
 
     // Dueño entra directo sin PIN
     useEffect(() => {
@@ -36,6 +66,56 @@ export function ProductMasterModal({ isOpen, onClose, inventory, setInventory, i
             setError(true);
             setPinCode("");
         }
+    };
+
+    const handleBulkSave = async () => {
+        if (!bulkText.trim()) return;
+        setUploading(true);
+        const lines = bulkText.trim().split('\n');
+        const newItems = [];
+        
+        for (const line of lines) {
+            const cols = line.split('\t');
+            if (cols.length >= 4) {
+                newItems.push({
+                    name: cols[0].trim(),
+                    code: cols[1].trim() || `AUTO-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                    price: parseFloat(cols[2].replace(',', '.')) || 0,
+                    stock: parseFloat(cols[3].replace(',', '.')) || 0,
+                    um: cols[4] ? cols[4].trim() : 'und',
+                    unidades_base: cols[5] ? parseInt(cols[5]) : 1,
+                    ubicacion: cols[6] ? cols[6].trim() : '',
+                    sale_type: 'empacado'
+                });
+            }
+        }
+        
+        if (newItems.length > 0) {
+            try {
+                // Upsert to Supabase
+                const success = await supabaseService.saveProductMaster(userId || 'admin', newItems as any);
+                if (success) {
+                    // Update local state
+                    const updated = [...inventory];
+                    newItems.forEach(ni => {
+                        const idx = updated.findIndex(u => u.code === ni.code);
+                        if (idx >= 0) updated[idx] = { ...updated[idx], ...ni };
+                        else updated.push(ni as any);
+                    });
+                    setInventory(updated);
+                    setShowBulk(false);
+                    setBulkText("");
+                    alert(`¡Se importaron ${newItems.length} productos correctamente!`);
+                } else {
+                    alert("Hubo un error al guardar en la nube.");
+                }
+            } catch (err) {
+                console.error("Bulk save error:", err);
+            }
+        } else {
+            alert("No se detectaron datos válidos. Asegúrate de copiar desde Excel (Nombre, Código, Precio, Stock).");
+        }
+        setUploading(false);
     };
 
     const handleSaveEdit = async (e: React.FormEvent) => {
@@ -57,10 +137,13 @@ export function ProductMasterModal({ isOpen, onClose, inventory, setInventory, i
             // Persistir cambios básicos en inventario
             await supabaseService.updateProduct(editingItem.id, productData);
 
-            // Persistir precio si ha cambiado (para el casero actual)
+            // Persistir precio e imagen si ha cambiado (para el casero actual)
             const isUUID = userId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
             if (isUUID && editingItem.price !== undefined) {
                 await supabaseService.updateProductPrice(userId!, editingItem.id, editingItem.price);
+            }
+            if (isUUID && editingItem.custom_image_url !== undefined) {
+                await supabase.from('ingres_produc').update({ custom_image_url: editingItem.custom_image_url }).eq('cod_casero', userId).eq('producto_id', editingItem.id);
             }
         } else {
             // Add new
@@ -84,7 +167,8 @@ export function ProductMasterModal({ isOpen, onClose, inventory, setInventory, i
                             producto_id: newProd.id,
                             cantidad_ingreso: editingItem.stock || 50,
                             p_u_venta: editingItem.price || 1.50,
-                            p_u_compra: (editingItem.price || 1.50) * 0.8
+                            p_u_compra: (editingItem.price || 1.50) * 0.8,
+                            custom_image_url: editingItem.custom_image_url || null
                         });
                 }
 
@@ -185,13 +269,42 @@ export function ProductMasterModal({ isOpen, onClose, inventory, setInventory, i
                                         className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-300 bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all shadow-sm text-slate-900 placeholder:text-slate-400 font-medium"
                                     />
                                 </div>
-                                <button
-                                    onClick={() => setEditingItem({ name: '', code: '', price: 0, stock: 0, um: 'und', unidades_base: 1, ubicacion: '', fecha_caducidad: '' })}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-colors active:scale-95 w-full sm:w-auto justify-center"
-                                >
-                                    <Plus className="w-5 h-5" /> Añadir Producto
-                                </button>
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                    <button
+                                        onClick={() => setShowBulk(true)}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-colors active:scale-95 w-full sm:w-auto justify-center"
+                                    >
+                                        <PackagePlus className="w-5 h-5" /> Carga Masiva
+                                    </button>
+                                    <button
+                                        onClick={() => setEditingItem({ name: '', code: '', price: 0, stock: 0, um: 'und', unidades_base: 1, ubicacion: '', fecha_caducidad: '' })}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-5 py-3 rounded-xl font-bold flex items-center gap-2 shadow-sm transition-colors active:scale-95 w-full sm:w-auto justify-center"
+                                    >
+                                        <Plus className="w-5 h-5" /> Añadir Producto
+                                    </button>
+                                </div>
                             </div>
+
+                            {/* Bulk Upload Overlay */}
+                            {showBulk && (
+                                <div className="mb-4 sm:mb-6 bg-white p-4 sm:p-6 rounded-xl shadow-md border-2 border-purple-500 relative overflow-hidden animate-in zoom-in-95 flex-shrink-0">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/10 rounded-bl-[100px] pointer-events-none" />
+                                    <h4 className="text-lg font-black text-slate-800 mb-2">Carga Masiva (Desde Excel)</h4>
+                                    <p className="text-sm text-slate-500 mb-4">Copia las filas desde Excel y pégalas aquí. Las columnas deben ser: <b>Nombre | Código | Precio | Stock | UM | Unidades Base | Ubicación</b>.</p>
+                                    <textarea
+                                        value={bulkText}
+                                        onChange={(e) => setBulkText(e.target.value)}
+                                        className="w-full h-40 bg-slate-50 border border-slate-300 p-3 rounded-lg focus:border-purple-500 outline-none text-sm font-mono text-slate-700"
+                                        placeholder="Pega aquí..."
+                                    />
+                                    <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-slate-100">
+                                        <button type="button" onClick={() => setShowBulk(false)} className="px-5 py-2.5 rounded-lg font-bold text-slate-600 hover:bg-slate-100 transition-colors text-sm">Cancelar</button>
+                                        <button onClick={handleBulkSave} disabled={uploading} className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-2.5 rounded-lg font-bold shadow-lg transition-all active:scale-95 flex items-center gap-2 text-sm disabled:opacity-50">
+                                            {uploading ? "Importando..." : "Importar Datos"}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Edit/Add Form Overlay */}
                             {editingItem && (
@@ -216,6 +329,24 @@ export function ProductMasterModal({ isOpen, onClose, inventory, setInventory, i
                                             <input type="number" step="0.1" value={editingItem.stock} onChange={e => setEditingItem({ ...editingItem, stock: parseFloat(e.target.value) })} className="w-full bg-slate-50 border border-slate-300 p-2.5 rounded-lg focus:border-blue-500 outline-none text-slate-900 font-semibold" required />
                                         </div>
 
+                                        <div className="md:col-span-1">
+                                            <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Foto Propia (Máx 1MB)</label>
+                                            <div className="flex items-center gap-2">
+                                                {editingItem.custom_image_url ? (
+                                                    <img src={editingItem.custom_image_url} alt="Preview" className="w-10 h-10 object-contain bg-slate-100 rounded" />
+                                                ) : editingItem.image_url ? (
+                                                    <img src={editingItem.image_url} alt="Master" className="w-10 h-10 object-contain bg-slate-100 rounded opacity-50" />
+                                                ) : null}
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/jpeg, image/png, image/webp" 
+                                                    onChange={handleImageUpload} 
+                                                    disabled={uploading}
+                                                    className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition-colors"
+                                                />
+                                            </div>
+                                        </div>
+
                                         <div className="md:col-span-2">
                                             <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wider">Ubicaciones (Separadas por comas)</label>
                                             <div className="relative">
@@ -238,6 +369,9 @@ export function ProductMasterModal({ isOpen, onClose, inventory, setInventory, i
                                                 <option value="Onz">Onz (Onzas)</option>
                                                 <option value="m">m (Metros)</option>
                                                 <option value="pqte">pqte (Paquete)</option>
+                                                <option value="paquete">paquete (Paquete)</option>
+                                                <option value="atado">atado (Atado)</option>
+                                                <option value="ato">ato (Atado)</option>
                                             </select>
                                         </div>
 

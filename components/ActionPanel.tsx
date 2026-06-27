@@ -38,6 +38,7 @@ interface ActionPanelProps {
     onOpenMaster?: () => void;
     onOpenScanner?: () => void;
     onOpenLiveMonitor?: () => void;
+    onOpenPromotions?: () => void;
     onPanic: () => void;
     onOpenSecurity?: () => void;
     pendingOrdersCount?: number;
@@ -58,6 +59,7 @@ export function ActionPanel({
     onOpenScanner,
     onOpenLiveMonitor,
     onOpenSecurity,
+    onOpenPromotions,
     onPanic,
     pendingOrdersCount = 0,
 }: ActionPanelProps) {
@@ -170,6 +172,12 @@ export function ActionPanel({
                     icon={BarChart}
                     label="Report. y Sugerencias"
                     onClick={onExport}
+                />
+                <ActionButton
+                    icon={Sparkles}
+                    label="Kits & Promos IA"
+                    onClick={onOpenPromotions}
+                    className="border-indigo-500/50 bg-indigo-950/20 text-indigo-100"
                 />
                 <ActionButton
                     icon={Eye}

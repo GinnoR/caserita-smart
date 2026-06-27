@@ -35,7 +35,19 @@ The user needs to handle "Unit of Supply" (bulk purchases) vs "Unit of Sale" (in
 - [x] Generar Identidad Visual Premium (Logo y Branding).
 - [x] Crear Tour Visual en walkthrough.md con capturas actuales.
 - [x] Verificar persistencia de stock y precios en Supabase.
-- [ ] Pruebas del Sistema de Pánico:
-    - [ ] Botón de Pánico UI (Sirena + Alerta)
-    - [ ] Activación por Voz ("Auxilio")
-    - [ ] Registro remoto de incidente en Supabase
+- [x] **Pruebas del Sistema de Pánico:**
+    - [x] Botón de Pánico UI (Sirena + Alerta)
+    - [x] Activación por Voz ("Auxilio")
+    - [x] Registro remoto de incidente en Supabase
+    - [x] Captura de Coordenadas GPS (Latitud/Longitud) y "Teleprompter" de PIN en pantalla.
+- [x] **Gestión de PWA (Instalación Móvil):**
+    - [x] Configuración de `manifest.json` y `sw.js` (Service Worker).
+    - [x] Modificación de `layout.tsx` para aceptar instalación nativa en iOS/Android.
+    - [x] Botón flotante "Instalar App" habilitado.
+- [x] **API de Proveedores Real (Supabase):**
+    - [x] Migración SQL `proveedores`.
+    - [x] Conexión CRUD (Crear, Editar, Borrar, Leer) en `ProveedoresModal.tsx` vía `supabase-service`.
+- [x] **Preparación para Producción (Deploy Vercel):**
+    - [x] Archivo `.vercelignore` creado.
+    - [x] Corrección de reglas en `next.config.ts`.
+    - [x] Prueba de compilación `npm run build` exitosa.

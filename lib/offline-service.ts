@@ -1,25 +1,14 @@
-/**
- * offline-service.ts
- * Maneja el almacenamiento local (localStorage) para permitir el funcionamiento offline.
- */
+import { db } from './db';
+import { supabaseService } from './supabase-service';
 
 const KEYS = {
     INVENTORY: 'caserita_cache_inventory',
     CUSTOMERS: 'caserita_cache_customers',
-    SYNC_QUEUE: 'caserita_sync_queue_sales',
     LAST_SYNC: 'caserita_last_sync_time'
 };
 
-export interface SyncItem {
-    id: string;
-    sale: any;
-    details: any[];
-    timestamp: number;
-}
-
 export const offlineService = {
     // --- CACHE DE DATOS ---
-
     saveInventory(data: any[]) {
         if (typeof window === 'undefined') return;
         localStorage.setItem(KEYS.INVENTORY, JSON.stringify(data));
@@ -43,37 +32,66 @@ export const offlineService = {
         return data ? JSON.parse(data) : null;
     },
 
-    // --- COLA DE SINCRONIZACIÓN (VENTAS) ---
+    // --- COLA DE SINCRONIZACIÓN (VENTAS) CON DEXIE ---
 
-    addToSyncQueue(sale: any, details: any[]) {
+    async addToSyncQueue(sale: any, details: any[]) {
         if (typeof window === 'undefined') return;
-        const queue: SyncItem[] = this.getSyncQueue();
-        const newItem: SyncItem = {
-            id: `OFFLINE-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        const id = `OFFLINE-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
+        
+        await db.pendingSales.add({
+            id,
             sale,
             details,
-            timestamp: Date.now()
-        };
-        queue.push(newItem);
-        localStorage.setItem(KEYS.SYNC_QUEUE, JSON.stringify(queue));
-        console.log('📦 Venta añadida a la cola offline:', newItem.id);
-        return newItem.id;
+            timestamp: Date.now(),
+            status: 'pending'
+        });
+        
+        console.log('📦 Venta añadida a la cola offline (IndexedDB):', id);
+        return id;
     },
 
-    getSyncQueue(): SyncItem[] {
-        if (typeof window === 'undefined') return [];
-        const data = localStorage.getItem(KEYS.SYNC_QUEUE);
-        return data ? JSON.parse(data) : [];
+    async getPendingQueueCount(): Promise<number> {
+        if (typeof window === 'undefined') return 0;
+        return await db.pendingSales.where('status').equals('pending').count();
     },
 
-    removeFromSyncQueue(itemId: string) {
+    // --- SINCRONIZADOR EN SEGUNDO PLANO ---
+    
+    async syncPendingSales() {
         if (typeof window === 'undefined') return;
-        const queue = this.getSyncQueue().filter(item => item.id !== itemId);
-        localStorage.setItem(KEYS.SYNC_QUEUE, JSON.stringify(queue));
-    },
+        
+        const pending = await db.pendingSales.where('status').equals('pending').toArray();
+        if (pending.length === 0) return;
 
-    clearSyncQueue() {
-        if (typeof window === 'undefined') return;
-        localStorage.removeItem(KEYS.SYNC_QUEUE);
+        console.log(`🔄 Iniciando sincronización de ${pending.length} ventas offline...`);
+
+        for (const item of pending) {
+            try {
+                // Marcar como en proceso
+                await db.pendingSales.update(item.id!, { status: 'syncing' });
+
+                // Intentar guardar en Supabase
+                const saleId = await supabaseService.saveSale(item.sale);
+                if (saleId) {
+                    // Si hay detalles, vincularlos al nuevo saleId
+                    if (item.details && item.details.length > 0) {
+                        const finalDetails = item.details.map(d => ({ ...d, venta_id: saleId }));
+                        await supabaseService.saveSaleDetails(finalDetails);
+                        // Actualizar stock
+                        await supabaseService.updateInventoryStock(item.sale.cod_casero, finalDetails);
+                    }
+                    
+                    // Si todo fue bien, borrar de la cola local
+                    await db.pendingSales.delete(item.id!);
+                    console.log(`✅ Venta offline sincronizada: ${item.id} -> Supabase ID: ${saleId}`);
+                } else {
+                    // Falló la inserción (ej. sin conexión nuevamente), regresar a pending
+                    await db.pendingSales.update(item.id!, { status: 'pending' });
+                }
+            } catch (err: any) {
+                console.error(`❌ Error sincronizando venta ${item.id}:`, err);
+                await db.pendingSales.update(item.id!, { status: 'failed', error: err.message });
+            }
+        }
     }
 };

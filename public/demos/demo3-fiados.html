@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Demo 3 — Caserita Smart: Fiados Digital</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#0a0e1a;font-family:'Outfit',sans-serif;overflow:hidden;width:100vw;height:100vh;}
+
+.scene{width:100vw;height:100vh;display:grid;grid-template-columns:1fr 1fr;position:relative;}
+
+/* LEFT: Old way */
+.left{background:linear-gradient(135deg,#1a0a0a,#2d1010);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;position:relative;}
+.left::after{content:'';position:absolute;right:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,transparent,#fbbf24,transparent);}
+.side-label{font-size:13px;font-weight:700;letter-spacing:4px;text-transform:uppercase;padding:6px 16px;border-radius:100px;margin-bottom:24px;}
+.left .side-label{background:#7f1d1d;color:#fca5a5;}
+.right .side-label{background:#064e3b;color:#6ee7b7;}
+
+.notebook{background:#fffbeb;border-radius:8px;padding:24px;width:260px;box-shadow:0 20px 60px rgba(0,0,0,0.5);transform:rotate(-2deg);position:relative;}
+.notebook::before{content:'';position:absolute;left:40px;top:0;bottom:0;width:2px;background:#fca5a5;opacity:0.5;}
+.notebook .nb-title{font-size:15px;font-weight:700;color:#92400e;margin-bottom:16px;border-bottom:2px solid #fde68a;padding-bottom:8px;font-family:Georgia,serif;}
+.nb-row{display:flex;justify-content:space-between;font-family:Georgia,serif;font-size:13px;color:#78350f;padding:5px 0;border-bottom:1px solid #fef3c7;position:relative;}
+.nb-row.crossed::after{content:'';position:absolute;left:0;right:0;top:50%;height:2px;background:#ef4444;}
+.x-mark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-8deg);font-size:180px;color:#ef4444;opacity:0;font-weight:900;z-index:10;animation:crossOut 0.5s 3s forwards;}
+@keyframes crossOut{from{opacity:0;transform:translate(-50%,-50%) scale(0.5) rotate(-8deg)}to{opacity:0.8;transform:translate(-50%,-50%) scale(1) rotate(-8deg)}}
+
+/* RIGHT: New way */
+.right{background:linear-gradient(135deg,#0a1a12,#071a1a);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;}
+
+.phone-frame{width:260px;background:#0f172a;border-radius:24px;border:3px solid #1e293b;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,0.8),0 0 60px rgba(16,185,129,0.1);}
+.phone-header{background:linear-gradient(90deg,#065f46,#047857);padding:14px 16px;}
+.phone-header h3{color:white;font-size:15px;font-weight:700;}
+.phone-header p{color:#6ee7b7;font-size:11px;}
+
+.fiado-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid #1e293b;opacity:0;transform:translateX(20px);transition:all 0.5s cubic-bezier(0.34,1.56,0.64,1);}
+.fiado-item.show{opacity:1;transform:translateX(0);}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.fi-name{color:white;font-size:13px;font-weight:600;}
+.fi-date{color:#64748b;font-size:10px;}
+.fi-amount{margin-left:auto;font-weight:700;font-size:14px;}
+.fi-status{font-size:10px;padding:2px 8px;border-radius:100px;margin-top:2px;text-align:right;}
+.pending{color:#fbbf24;}.paid{color:#4ade80;}
+.status-pending{background:#451a03;color:#fbbf24;}
+.status-paid{background:#052e16;color:#4ade80;}
+
+.cobrar-btn{margin:14px 16px;background:linear-gradient(90deg,#10b981,#059669);color:white;border:none;padding:14px;border-radius:12px;width:calc(100% - 32px);font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;cursor:pointer;opacity:0;transition:opacity 0.5s;animation:none;}
+.cobrar-btn.show{opacity:1;}
+
+/* Center text */
+.center-badge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;background:#0f172a;border:2px solid #fbbf24;border-radius:100px;padding:10px 20px;color:#fbbf24;font-weight:700;font-size:13px;letter-spacing:2px;box-shadow:0 0 40px rgba(251,191,36,0.3);animation:badgeIn 0.5s 3.5s backwards;}
+@keyframes badgeIn{from{opacity:0;transform:translate(-50%,-50%) scale(0.5);}to{opacity:1;transform:translate(-50%,-50%) scale(1);}}
+
+.wave-bar-bottom{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#10b981,#0ea5e9,#8b5cf6,#10b981);background-size:200%;animation:wave 3s linear infinite;}
+@keyframes wave{0%{background-position:0%}100%{background-position:200%}}
+.progress-bar{position:absolute;bottom:4px;left:0;height:4px;background:rgba(255,255,255,0.3);animation:progress 10s linear forwards;}
+@keyframes progress{from{width:0}to{width:100%}}
+</style>
+</head>
+<body>
+<div class="scene">
+  <!-- LEFT -->
+  <div class="left">
+    <div class="side-label">😩 ANTES</div>
+    <div class="notebook" style="position:relative">
+      <div class="nb-title">📒 Fiados — Mayo</div>
+      <div class="nb-row crossed">José Quispe <span>S/.45</span></div>
+      <div class="nb-row">María Torres <span>S/.20</span></div>
+      <div class="nb-row crossed">Luis Huanca <span>S/.35</span></div>
+      <div class="nb-row">Carmen Díaz <span>S/.12</span></div>
+      <div class="nb-row">Pedro Yupanqui <span>S/.55</span></div>
+      <div class="nb-row crossed">Ana Flores <span>S/.30</span></div>
+      <div class="nb-row" style="margin-top:8px;font-weight:bold;color:#92400e">Total: S/.197 ???</div>
+      <div class="x-mark">✗</div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+    <div class="side-label">🚀 AHORA</div>
+    <div class="phone-frame">
+      <div class="phone-header">
+        <h3>📋 Cuaderno Digital</h3>
+        <p>6 clientes · Total: S/. 197.00</p>
+      </div>
+      <div class="fiado-item" id="f1">
+        <div class="avatar" style="background:#1e3a2f">👨</div>
+        <div><div class="fi-name">José Quispe</div><div class="fi-date">hace 3 días</div></div>
+        <div style="text-align:right"><div class="fi-amount paid">S/. 45 ✓</div><div class="fi-status status-paid">PAGADO</div></div>
+      </div>
+      <div class="fiado-item" id="f2">
+        <div class="avatar" style="background:#3a1e1e">👩</div>
+        <div><div class="fi-name">María Torres</div><div class="fi-date">hoy</div></div>
+        <div style="text-align:right"><div class="fi-amount pending">S/. 20</div><div class="fi-status status-pending">PENDIENTE</div></div>
+      </div>
+      <div class="fiado-item" id="f3">
+        <div class="avatar" style="background:#1a1e3a">👨</div>
+        <div><div class="fi-name">Pedro Yupanqui</div><div class="fi-date">ayer</div></div>
+        <div style="text-align:right"><div class="fi-amount pending">S/. 55</div><div class="fi-status status-pending">PENDIENTE</div></div>
+      </div>
+      <div class="fiado-item" id="f4">
+        <div class="avatar" style="background:#1e3a1e">👵</div>
+        <div><div class="fi-name">Carmen Díaz</div><div class="fi-date">hace 5 días</div></div>
+        <div style="text-align:right"><div class="fi-amount pending">S/. 12</div><div class="fi-status status-pending">PENDIENTE</div></div>
+      </div>
+      <button class="cobrar-btn" id="cobrarBtn">💚 Cobrar S/. 87.00 pendientes</button>
+    </div>
+  </div>
+
+  <div class="center-badge">VS</div>
+  <div class="wave-bar-bottom"></div>
+  <div class="progress-bar"></div>
+</div>
+<script>
+setTimeout(()=>document.getElementById('f1').classList.add('show'),1500);
+setTimeout(()=>document.getElementById('f2').classList.add('show'),2200);
+setTimeout(()=>document.getElementById('f3').classList.add('show'),2900);
+setTimeout(()=>document.getElementById('f4').classList.add('show'),3600);
+setTimeout(()=>document.getElementById('cobrarBtn').classList.add('show'),5000);
+setTimeout(()=>location.reload(),11000);
+</script>
+</body>
+</html>

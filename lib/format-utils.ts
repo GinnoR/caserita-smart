@@ -17,7 +17,8 @@ export function formatStock(stock: number, unidadesBase: number = 1, name: strin
         { regex: /pack|six/i, label: "pack" },
         { regex: /bolsa/i, label: "bolsa" },
         { regex: /jab|jabita/i, label: "jabita" },
-        { regex: /display/i, label: "display" }
+        { regex: /display/i, label: "display" },
+        { regex: /atado|ato/i, label: "atado" }
     ];
 
     const found = patterns.find(p => p.regex.test(lowerName));
@@ -49,6 +50,8 @@ export function formatStock(stock: number, unidadesBase: number = 1, name: strin
         else if (unitLabel === "pack") unitLabel = "packs";
         else if (unitLabel === "bolsa") unitLabel = "bolsas";
         else if (unitLabel === "jabita") unitLabel = "jabitas";
+        else if (unitLabel === "atado") unitLabel = "atados";
+        else if (unitLabel === "ato") unitLabel = "atos";
         else if (unitLabel === "unidad") unitLabel = "unidades";
         else if (!unitLabel.endsWith("s") && unitLabel !== "und") unitLabel += "s";
     }

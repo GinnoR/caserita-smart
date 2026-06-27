@@ -1,0 +1,17 @@
+{
+  "name": "Caserita Smart",
+  "short_name": "Caserita",
+  "description": "El asistente inteligente para tu bodega.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e3a8a",
+  "icons": [
+    {
+      "src": "/globe.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

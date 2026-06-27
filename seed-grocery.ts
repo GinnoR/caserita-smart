@@ -24,8 +24,8 @@ const products = [
 
     // Líquidos por Litro
     { cod_bar_produc: 'BEB-001', nombre_producto: 'Aceite Vegetal Granel', marca_producto: 'S/M', categoria: 'Aceites', um: 'Lt', unidades_base: 1 },
-    { cod_bar_produc: 'BEB-002', nombre_producto: 'Leche Fresca de Vaca', marca_producto: 'Establo', categoria: 'Lácteos', um: 'Lt', unidades_base: 1 },
-    { cod_bar_produc: 'BEB-003', nombre_producto: 'Vinagre Blanco', marca_producto: 'S/M', categoria: 'Condimentos', um: 'Lt', unidades_base: 1 },
+    { cod_bar_produc: 'BEB-002', nombre_producto: 'Leche Fresca de Vaca 1L', marca_producto: 'Establo', categoria: 'Lácteos', um: 'Lt', unidades_base: 1 },
+    { cod_bar_produc: 'BEB-003', nombre_producto: 'Vinagre Blanco 500 ml', marca_producto: 'S/M', categoria: 'Condimentos', um: 'Lt', unidades_base: 1 },
 
     // De limpieza / Otros por Rollo o Paquete
     { cod_bar_produc: 'LIM-001', nombre_producto: 'Papel Higiénico Económico', marca_producto: 'S/M', categoria: 'Limpieza', um: 'rollo', unidades_base: 1 },
@@ -38,8 +38,8 @@ const products = [
     { cod_bar_produc: 'AB-006', nombre_producto: 'Huevos de Granja (Jabita x30)', marca_producto: 'S/M', categoria: 'Lácteos', um: 'und', unidades_base: 30 },
 
     // Otros productos variados
-    { cod_bar_produc: 'AB-007', nombre_producto: 'Sal de Marash', marca_producto: 'Granel', categoria: 'Condimentos', um: 'Kg', unidades_base: 1 },
-    { cod_bar_produc: 'AB-008', nombre_producto: 'Avena en Hojuelas', marca_producto: 'Granel', categoria: 'Desayuno', um: 'Kg', unidades_base: 1 },
+    { cod_bar_produc: 'AB-007', nombre_producto: 'Sal de Marash 500g', marca_producto: 'Granel', categoria: 'Condimentos', um: 'Kg', unidades_base: 1 },
+    { cod_bar_produc: 'AB-008', nombre_producto: 'Avena en Hojuelas 500g', marca_producto: 'Granel', categoria: 'Desayuno', um: 'Kg', unidades_base: 1 },
     { cod_bar_produc: 'BEB-005', nombre_producto: 'Gaseosa Inka Kola 3L', marca_producto: 'Coca Cola', categoria: 'Bebidas', um: 'und', unidades_base: 1 },
     { cod_bar_produc: 'LIM-004', nombre_producto: 'Detergente a Granel', marca_producto: 'S/M', categoria: 'Limpieza', um: 'Kg', unidades_base: 1 },
     { cod_bar_produc: 'AB-009', nombre_producto: 'Pan de Molde Artesanal', marca_producto: 'Local', categoria: 'Panadería', um: 'und', unidades_base: 1 },
@@ -54,7 +54,7 @@ const products = [
     { cod_bar_produc: 'AB-016', nombre_producto: 'Café Pasado', marca_producto: 'Chanchamayo', categoria: 'Desayuno', um: 'grs.', unidades_base: 250 },
     { cod_bar_produc: 'LIM-005', nombre_producto: 'Lejía Sapolio 1L', marca_producto: 'Alicorp', categoria: 'Limpieza', um: 'und', unidades_base: 1 },
     { cod_bar_produc: 'SNK-001', nombre_producto: 'Galleta de Soda (Six Pack)', marca_producto: 'Costa', categoria: 'Snacks', um: 'pqte', unidades_base: 6 },
-    { cod_bar_produc: 'AB-017', nombre_producto: 'Mantequilla con Sal', marca_producto: 'Laive', categoria: 'Lácteos', um: 'und', unidades_base: 1 }
+    { cod_bar_produc: 'AB-017', nombre_producto: 'Mantequilla con Sal 200g', marca_producto: 'Laive', categoria: 'Lácteos', um: 'und', unidades_base: 1 }
 ];
 
 async function seed() {

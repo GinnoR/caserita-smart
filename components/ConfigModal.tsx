@@ -257,6 +257,38 @@ function SecuritySettings({ isOwner }: { isOwner: boolean }) {
                         </button>
                     </div>
                 </div>
+                
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-4 mt-4">
+                    <div>
+                        <h4 className="font-bold text-slate-800">Alarma Silenciosa por Defecto</h4>
+                        <p className="text-xs text-slate-600">Si se activa, el botón de pánico y la voz no emitirán sonido inicialmente (recomendado si hay peligro real).</p>
+                    </div>
+                    <div>
+                        <input 
+                            type="checkbox" 
+                            disabled={!isOwner}
+                            defaultChecked={typeof window !== 'undefined' ? (localStorage.getItem('caserita_silent_panic_default') === 'true') : false}
+                            onChange={(e) => isOwner && localStorage.setItem('caserita_silent_panic_default', e.target.checked ? 'true' : 'false')}
+                            className="w-6 h-6 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                    </div>
+                </div>
+
+                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between gap-4 mt-4">
+                    <div>
+                        <h4 className="font-bold text-slate-800">Tengo Cámaras de Seguridad</h4>
+                        <p className="text-xs text-slate-600">Al activar por voz, el sistema tomará una imagen de las cámaras. Si está apagado, se pedirá confirmación de voz (repetir palabra).</p>
+                    </div>
+                    <div>
+                        <input 
+                            type="checkbox" 
+                            disabled={!isOwner}
+                            defaultChecked={typeof window !== 'undefined' ? (localStorage.getItem('caserita_has_cameras') === 'true') : false}
+                            onChange={(e) => isOwner && localStorage.setItem('caserita_has_cameras', e.target.checked ? 'true' : 'false')}
+                            className="w-6 h-6 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                    </div>
+                </div>
             </SettingSection>
 
             <SettingSection title="Optimización de IA (Ahorro de Facturación)">

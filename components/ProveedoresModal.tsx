@@ -1,28 +1,25 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Truck, X, Phone, ShoppingCart, FileText, CheckCircle2, PackagePlus, Receipt, CreditCard, Calendar, Upload, Plus, Sparkles, Mic, Loader2, AlertTriangle, Database } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { supabaseService } from "@/lib/supabase-service";
 
 interface ProveedoresModalProps {
     isOpen: boolean;
     onClose: () => void;
     inventory?: any[]; // Menu de datos del catálogo
+    userId?: string;
 }
 
-export function ProveedoresModal({ isOpen, onClose, inventory = [] }: ProveedoresModalProps) {
+export function ProveedoresModal({ isOpen, onClose, inventory = [], userId }: ProveedoresModalProps) {
     const [activeTab, setActiveTab] = useState<'proveedores' | 'compras' | 'gastos'>('proveedores');
 
     // --- ESTADO DE PROVEEDORES ---
-    const [proveedores, setProveedores] = useState([
-        { id: 1, name: "Distribuidora Alicorp", category: "Abarrotes / Aceites", phone: "999888777", visits: "Lunes y Jueves", debt: 0, status: "ok" },
-        { id: 2, name: "Leche Gloria S.A.", category: "Lácteos", phone: "999666555", visits: "Martes", debt: 150, status: "pending" },
-        { id: 3, name: "Backus", category: "Bebidas", phone: "999444333", visits: "Viernes", debt: 450, status: "pending" },
-        { id: 4, name: "Corporación Lindley", category: "Gaseosas", phone: "999222111", visits: "Miércoles", debt: 0, status: "ok" },
-    ]);
+    const [proveedores, setProveedores] = useState<any[]>([]);
 
     const [showProvForm, setShowProvForm] = useState(false);
     const [editingProvId, setEditingProvId] = useState<number | null>(null);
-    const [provData, setProvData] = useState({ name: '', category: 'Abarrotes / Aceites', phone: '', visits: 'Lunes' });
+    const [provData, setProvData] = useState({ name: '', category: 'Abarrotes / Aceites', phone: '', frequency: 'Lunes' });
 
     // Estado para Inteligencia Artificial (Compras Vision)
     const [isScanning, setIsScanning] = useState(false);
@@ -32,11 +29,54 @@ export function ProveedoresModal({ isOpen, onClose, inventory = [] }: Proveedore
     // Estado para Inteligencia Artificial (Gastos Voz)
     const [isHearingExpense, setIsHearingExpense] = useState(false);
     const [gasto, setGasto] = useState({ concept: '', amount: '', cat: 'Servicios Básicos (Luz/Agua/Internet)', date: new Date().toISOString().split('T')[0] });
-    const [recentExpenses, setRecentExpenses] = useState<any[]>([
-        { id: 1, concept: 'Pago de Luz Enero', amount: '85.00', cat: 'Servicios Básicos (Luz/Agua/Internet)', date: '2026-01-15' },
-        { id: 2, concept: 'Bolsas de Embalaje', amount: '25.50', cat: 'Mantenimiento / Útiles', date: '2026-02-10' }
-    ]);
+    const [recentExpenses, setRecentExpenses] = useState<any[]>([]);
     const [editingExpenseId, setEditingExpenseId] = useState<number | null>(null);
+
+    const loadData = async () => {
+        if (!userId) return;
+        
+        // Cargar Gastos
+        const gastosData = await supabaseService.getGastos(userId);
+        if (gastosData && gastosData.length > 0) {
+            setRecentExpenses(gastosData.map(d => ({
+                id: d.id,
+                concept: d.concepto,
+                amount: d.monto.toString(),
+                cat: d.categoria,
+                date: d.fecha
+            })));
+        } else {
+            setRecentExpenses([
+                { id: 1, concept: 'Pago de Luz Enero', amount: '85.00', cat: 'Servicios Básicos (Luz/Agua/Internet)', date: '2026-01-15' }
+            ]);
+        }
+
+        // Cargar Proveedores
+        const provs = await supabaseService.getSuppliers(userId);
+        if (provs && provs.length > 0) {
+            setProveedores(provs);
+        } else {
+            setProveedores([
+                { id: 1, name: "Distribuidora Alicorp", category: "Abarrotes / Aceites", phone: "999888777", frequency: "Lunes y Jueves", debt: 0, status: "ok" }
+            ]);
+        }
+    };
+
+    useEffect(() => {
+        if (isOpen) {
+            loadData();
+        }
+    }, [isOpen, userId]);
+
+    // Estado para Mensajería con Proveedores
+    const [messageSession, setMessageSession] = useState<{ providerId: number; message: string } | null>(null);
+    const [messagesHistory, setMessagesHistory] = useState<any[]>(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('caserita_provider_msgs');
+            return saved ? JSON.parse(saved) : [];
+        }
+        return [];
+    });
 
     if (!isOpen) return null;
 
@@ -159,15 +199,23 @@ export function ProveedoresModal({ isOpen, onClose, inventory = [] }: Proveedore
                                     <h4 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
                                         <Plus className="text-blue-500" /> {editingProvId ? "Actualizar Proveedor" : "Nuevo Distribuidor"}
                                     </h4>
-                                    <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={(e) => {
+                                    <form className="grid grid-cols-1 md:grid-cols-2 gap-4" onSubmit={async (e) => {
                                         e.preventDefault();
                                         if (editingProvId) {
-                                            setProveedores(proveedores.map(p => p.id === editingProvId ? { ...p, ...provData } : p));
+                                            const updated = await supabaseService.updateSupplier(editingProvId, { ...provData, frequency: (provData as any).visits || provData.frequency });
+                                            if (updated) {
+                                                setProveedores(proveedores.map(p => p.id === editingProvId ? { ...p, ...provData, frequency: (provData as any).visits || provData.frequency } : p));
+                                            }
                                             setEditingProvId(null);
                                         } else {
-                                            setProveedores([{ ...provData, id: Date.now(), debt: 0, status: 'ok' }, ...proveedores]);
+                                            if (userId) {
+                                                const newProv = await supabaseService.createSupplier({ ...provData, frequency: (provData as any).visits || provData.frequency, cod_casero: userId });
+                                                if (newProv) {
+                                                    setProveedores([newProv, ...proveedores]);
+                                                }
+                                            }
                                         }
-                                        setProvData({ name: '', category: 'Abarrotes / Aceites', phone: '', visits: 'Lunes' });
+                                        setProvData({ name: '', category: 'Abarrotes / Aceites', phone: '', frequency: 'Lunes' } as any);
                                         setShowProvForm(false);
                                     }}>
                                         <div>
@@ -236,7 +284,14 @@ export function ProveedoresModal({ isOpen, onClose, inventory = [] }: Proveedore
                                                             <FileText className="w-4 h-4" />
                                                         </button>
                                                         <button
-                                                            onClick={() => { if (confirm('¿Eliminar proveedor?')) setProveedores(proveedores.filter(p => p.id !== prov.id)) }}
+                                                            onClick={async () => {
+                                                                if (confirm('¿Eliminar proveedor?')) {
+                                                                    const deleted = await supabaseService.deleteSupplier(prov.id);
+                                                                    if (deleted) {
+                                                                        setProveedores(proveedores.filter(p => p.id !== prov.id));
+                                                                    }
+                                                                }
+                                                            }}
                                                             className="p-1.5 bg-red-50 text-red-600 rounded-lg hover:bg-red-100" title="Eliminar"
                                                         >
                                                             <X className="w-4 h-4" />
@@ -257,7 +312,13 @@ export function ProveedoresModal({ isOpen, onClose, inventory = [] }: Proveedore
                                                 <a href={`https://wa.me/51${prov.phone}`} target="_blank" rel="noopener noreferrer" className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 font-medium py-2 rounded-lg border border-green-200 flex items-center justify-center gap-2 text-sm transition-colors">
                                                     <Phone className="w-4 h-4" /> Llamar
                                                 </a>
-                                                <button className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 rounded-lg border border-blue-200 flex items-center justify-center gap-2 text-sm transition-colors">
+                                                <button 
+                                                    onClick={() => {
+                                                        const defaultMessage = `Hola proveedor de ${prov.category}, necesito reponer stock urgente para mi tienda.`;
+                                                        setMessageSession({ providerId: prov.id, message: defaultMessage });
+                                                    }}
+                                                    className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 rounded-lg border border-blue-200 flex items-center justify-center gap-2 text-sm transition-colors"
+                                                >
                                                     <ShoppingCart className="w-4 h-4" /> Pedido
                                                 </button>
                                             </div>
@@ -265,6 +326,73 @@ export function ProveedoresModal({ isOpen, onClose, inventory = [] }: Proveedore
                                     </div>
                                 ))}
                             </div>
+
+                            {/* SESIÓN DE MENSAJERÍA */}
+                            {messageSession && (() => {
+                                const prov = proveedores.find(p => p.id === messageSession.providerId);
+                                if (!prov) return null;
+                                return (
+                                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                                        <div className="bg-white rounded-3xl w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 border border-slate-200">
+                                            <div className="bg-green-600 p-4 flex justify-between items-center text-white">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="bg-green-500 p-2 rounded-full"><ShoppingCart className="w-5 h-5 text-white" /></div>
+                                                    <div>
+                                                        <h4 className="font-black">Pedido a {prov.name}</h4>
+                                                        <p className="text-[10px] text-green-100">WhatsApp: +51 {prov.phone}</p>
+                                                    </div>
+                                                </div>
+                                                <button onClick={() => setMessageSession(null)} className="hover:bg-white/20 p-1.5 rounded-full"><X className="w-5 h-5" /></button>
+                                            </div>
+                                            <div className="p-5 bg-slate-50">
+                                                <label className="block text-xs font-black uppercase text-slate-500 mb-2">Mensaje del Pedido</label>
+                                                
+                                                {/* Mensajes Rápidos */}
+                                                <div className="flex flex-wrap gap-2 mb-3">
+                                                    <button onClick={() => setMessageSession(prev => prev ? { ...prev, message: prev.message + " ¿Cuál es la fecha probable de entrega del pedido? " } : prev)} className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-xs font-bold rounded-full transition-colors">📅 Fecha de Entrega</button>
+                                                    <button onClick={() => setMessageSession(prev => prev ? { ...prev, message: prev.message + " Deseo agregar lo siguiente a mi pedido: " } : prev)} className="px-3 py-1 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-bold rounded-full transition-colors">➕ Agregar al Pedido</button>
+                                                    <button onClick={() => setMessageSession(prev => prev ? { ...prev, message: prev.message + " Solicito evaluación para ampliar mi línea de crédito actual. " } : prev)} className="px-3 py-1 bg-amber-100 hover:bg-amber-200 text-amber-700 text-xs font-bold rounded-full transition-colors">💳 Ampliar Crédito</button>
+                                                    <button onClick={() => setMessageSession(prev => prev ? { ...prev, message: prev.message + " Por favor, envíame tu catálogo de precios actualizado. " } : prev)} className="px-3 py-1 bg-purple-100 hover:bg-purple-200 text-purple-700 text-xs font-bold rounded-full transition-colors">📋 Solicitar Catálogo</button>
+                                                    <button onClick={() => setMessageSession(prev => prev ? { ...prev, message: prev.message + " Necesito la copia de la factura del último pedido, por favor. " } : prev)} className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-full transition-colors">📄 Copia Factura</button>
+                                                    <button onClick={() => setMessageSession(prev => prev ? { ...prev, message: prev.message + " 🚨 URGENTE: Favor de despachar el pedido lo antes posible. " } : prev)} className="px-3 py-1 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-full transition-colors">🚨 Urgente</button>
+                                                </div>
+
+                                                <textarea 
+                                                    className="w-full border-2 border-slate-200 rounded-2xl p-4 min-h-[120px] text-sm font-medium focus:border-green-500 outline-none resize-none shadow-inner"
+                                                    value={messageSession.message}
+                                                    onChange={(e) => setMessageSession({ ...messageSession, message: e.target.value })}
+                                                />
+                                                <div className="mt-4 flex gap-3">
+                                                    <button onClick={() => setMessageSession(null)} className="flex-1 py-3 bg-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-300">Cancelar</button>
+                                                    <button 
+                                                        onClick={() => {
+                                                            // Guardar registro
+                                                            const newHistory = [{
+                                                                id: Date.now(),
+                                                                providerName: prov.name,
+                                                                date: new Date().toLocaleString(),
+                                                                message: messageSession.message
+                                                            }, ...messagesHistory];
+                                                            setMessagesHistory(newHistory);
+                                                            localStorage.setItem('caserita_provider_msgs', JSON.stringify(newHistory));
+                                                            
+                                                            // Abrir WA
+                                                            const encodedMsg = encodeURIComponent(messageSession.message);
+                                                            window.open(`https://wa.me/51${prov.phone}?text=${encodedMsg}`, "_blank");
+                                                            
+                                                            setMessageSession(null);
+                                                            setActiveTab('historial_pedidos' as any);
+                                                        }} 
+                                                        className="flex-1 py-3 bg-green-600 hover:bg-green-700 text-white font-black rounded-xl shadow-lg flex items-center justify-center gap-2"
+                                                    >
+                                                        <Sparkles className="w-4 h-4" /> Enviar WhatsApp
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
 
@@ -412,17 +540,31 @@ export function ProveedoresModal({ isOpen, onClose, inventory = [] }: Proveedore
                                 </button>
                             </div>
 
-                            <form className="space-y-4 relative" onSubmit={(e) => {
+                            <form className="space-y-4 relative" onSubmit={async (e) => {
                                 e.preventDefault();
+                                
+                                const gastoToSave = { ...gasto, id: editingExpenseId || Date.now() };
+                                
                                 if (editingExpenseId !== null) {
-                                    setRecentExpenses(recentExpenses.map(exp => exp.id === editingExpenseId ? { ...gasto, id: editingExpenseId } : exp));
+                                    setRecentExpenses(recentExpenses.map(exp => exp.id === editingExpenseId ? gastoToSave : exp));
                                     setEditingExpenseId(null);
-                                    alert("Gasto Actualizado");
                                 } else {
-                                    setRecentExpenses([{ ...gasto, id: Date.now() }, ...recentExpenses]);
-                                    alert("Gasto Añadido");
+                                    setRecentExpenses([gastoToSave, ...recentExpenses]);
                                 }
+
                                 setGasto({ concept: '', amount: '', cat: 'Servicios Básicos (Luz/Agua/Internet)', date: new Date().toISOString().split('T')[0] });
+
+                                // Guardar en Supabase
+                                if (userId) {
+                                    const success = await supabaseService.saveGasto(userId, gastoToSave);
+                                    if (success) {
+                                        alert(editingExpenseId !== null ? "Gasto Actualizado y sincronizado" : "Gasto Añadido y sincronizado");
+                                    } else {
+                                        alert("Gasto guardado localmente (Offline).");
+                                    }
+                                } else {
+                                    alert("Gasto guardado en sesión.");
+                                }
                             }}>
                                 {/* Pantalla oscurecida al dictar */}
                                 {isHearingExpense && <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-10 rounded-xl flex items-center justify-center p-4">

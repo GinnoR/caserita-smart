@@ -19,14 +19,21 @@ import { ProductMasterModal } from "@/components/ProductMasterModal";
 import { ReportesModal } from "@/components/ReportesModal";
 import { FastScannerModal } from "@/components/FastScannerModal";
 import { LiveMonitorModal } from "@/components/LiveMonitorModal";
+import { PromotionsModal } from "@/components/PromotionsModal";
 import { useVoiceInput } from "@/hooks/useVoiceInput";
 import { usePanicMode } from "@/hooks/usePanicMode";
 import { useExportReport } from "@/hooks/useExportReport";
 import { SecurityPanel } from "@/components/SecurityPanel";
 import { CartItem, Sale, createSale, computeDailySummary, DailySummary } from "@/lib/sales";
 import { supabaseService } from "@/lib/supabase-service";
+import { formatStock } from "@/lib/format-utils";
 import { localParse, findBestProductMatch as findBestProductMatchUnified, getTopProductMatches } from "@/utils/matching";
 import { offlineService, SyncItem } from "@/lib/offline-service";
+import { generateTicketPDF } from "@/lib/pdf-generator";
+import dynamic from "next/dynamic";
+const OnboardingGuide = dynamic(() => import("@/components/OnboardingGuide"), { ssr: false });
+const PricingPanel = dynamic(() => import("@/components/PricingPanel"), { ssr: false });
+const FeedbackPanel = dynamic(() => import("@/components/FeedbackPanel"), { ssr: false });
 
 export type AIMode = 'pedidos' | 'asistente';
 interface DashboardProps {
@@ -34,6 +41,26 @@ interface DashboardProps {
     cajeroNombre?: string;
     onLogout?: () => void;
 }
+
+const formatSpeechQty = (qty: number, um: string = '') => {
+    const umLower = (um || '').toLowerCase();
+    if (Number.isInteger(qty)) {
+        if (umLower === 'kg') return `${qty} kilos`;
+        if (umLower === 'gr') return `${qty} gramos`;
+        return `${qty} unidades`;
+    }
+    
+    // Si tiene decimales
+    if (umLower === 'kg') {
+        const kilos = Math.floor(qty);
+        const gramos = Math.round((qty - kilos) * 1000);
+        if (kilos === 0) return `${gramos} gramos`;
+        return `${kilos} kilo${kilos > 1 ? 's' : ''} con ${gramos} gramos`;
+    }
+    
+    // Para otros leer con "punto" para TTS
+    return qty.toString().replace('.', ' punto ');
+};
 
 export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout }: DashboardProps) {
     const isOwner = !cajeroNombre || ['dueño/a', 'admin', 'desarrollador', 'caserito'].includes(cajeroNombre.trim().toLowerCase());
@@ -53,12 +80,15 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const [showReceiptModal, setShowReceiptModal] = useState(false);
     const [receiptType, setReceiptType] = useState<'whatsapp' | 'boleta' | 'factura'>('whatsapp');
     const [customerTaxId, setCustomerTaxId] = useState("");
+    const [sunatName, setSunatName] = useState("");
+    const [isValidatingSunat, setIsValidatingSunat] = useState(false);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<any>(null);
     const [showProveedores, setShowProveedores] = useState(false);
     const [showMaster, setShowMaster] = useState(false);
     const [showReports, setShowReports] = useState(false);
     const [showScanner, setShowScanner] = useState(false);
     const [showLiveMonitor, setShowLiveMonitor] = useState(false);
+    const [showPromotions, setShowPromotions] = useState(false);
     const [showSecurityPanel, setShowSecurityPanel] = useState(false);
     const [dailySummary, setDailySummary] = useState<DailySummary>({
         efectivo: 0,
@@ -85,10 +115,50 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const [activationKey, setActivationKey] = useState("");
     const [isActivating, setIsActivating] = useState(false);
 
+    // ONBOARDING + FREEMIUM
+    const [showOnboarding, setShowOnboarding] = useState(false);
+    const [showPricing, setShowPricing] = useState(false);
+    const [showFeedback, setShowFeedback] = useState(false);
+    const [caseroSubscription, setCaseroSubscription] = useState<'free' | 'annual'>('free');
+    const catalogUrl = userId ? `https://caseritasmart.cloud/catalogo/${userId}` : '';
+
     const { exportToXLSX } = useExportReport();
 
     // Precargar voces al montar el componente
     const cachedVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
+    useEffect(() => {
+        // Manejo de conexión y sincronización offline
+        const handleOnline = async () => {
+            setIsOnline(true);
+            setIsSyncing(true);
+            try {
+                await offlineService.syncPendingSales();
+            } finally {
+                setIsSyncing(false);
+            }
+        };
+        const handleOffline = () => setIsOnline(false);
+
+        if (typeof window !== "undefined") {
+            setIsOnline(navigator.onLine);
+            if (navigator.onLine) handleOnline();
+            
+            window.addEventListener('online', handleOnline);
+            window.addEventListener('offline', handleOffline);
+            
+            // Intervalo de seguridad para intentar sincronizar cada 5 minutos
+            const syncInterval = setInterval(() => {
+                if (navigator.onLine) handleOnline();
+            }, 300000);
+
+            return () => {
+                window.removeEventListener('online', handleOnline);
+                window.removeEventListener('offline', handleOffline);
+                clearInterval(syncInterval);
+            };
+        }
+    }, []);
+
     useEffect(() => {
         if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
         const loadVoices = () => {
@@ -179,7 +249,10 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 // Calcular disponibilidad real considerando lo que ya está en el carrito (excluyendo el item actual si estamos actualizando)
                 // Pero aquí estamos AGREGANDO nuevos items desde fuera
                 const inCartCurrent = updated.filter(i => String(i.code) === String(invItem.code)).reduce((sum, i) => sum + Number(i.qty), 0);
-                const available = Math.max(0, invItem.stock - inCartCurrent);
+                const divisor = invItem.unidades_base || 1;
+                const inCartCurrentUnits = inCartCurrent * divisor;
+                const availableUnits = Math.max(0, invItem.stock - inCartCurrentUnits);
+                const maxAllowedTotal = Math.floor(availableUnits / divisor);
 
                 // VALIDACIÓN PARANOICA DE STOCK 0
                 if (invItem.stock <= 0 && newItem.qty > 0) {
@@ -190,7 +263,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     return; // Bloqueo total
                 }
 
-                if (available <= 0 && newItem.qty > 0) {
+                if (maxAllowedTotal <= 0 && newItem.qty > 0) {
                     const msg = `este producto ${invItem.name} se ha agotado`;
                     speak(msg);
                     setAssistantResponse(msg);
@@ -212,12 +285,14 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     const newQty = Math.max(0, currentQty + delta);
                     
                     // Validar contra el stock total (porque currentQty ya está incluido en el stock ocupado)
-                    if (newQty > invItem.stock) {
-                        const msg = `Solo quedan ${invItem.stock} de ${existing.name}. Ajustando al máximo.`;
+                    const newQtyUnits = newQty * divisor;
+                    if (newQtyUnits > invItem.stock) {
+                        const maxAllowedQty = Math.floor(invItem.stock / divisor);
+                        const msg = `Solo quedan ${maxAllowedQty} de ${existing.name}. Ajustando al máximo.`;
                         speak(msg);
                         setAssistantResponse(msg);
                         setTimeout(() => setAssistantResponse(null), 4000);
-                        existing.qty = invItem.stock;
+                        existing.qty = maxAllowedQty;
                     } else {
                         existing.qty = newQty;
                     }
@@ -231,12 +306,13 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     }
                 } else if (newItem.qty > 0) {
                     let finalQty = Number(newItem.qty);
-                    if (finalQty > available || available <= 0) {
+                    const newItemUnits = finalQty * divisor;
+                    if (newItemUnits > availableUnits || availableUnits <= 0) {
                         const msg = `este producto ${invItem.name} se ha agotado`;
                         speak(msg);
                         setAssistantResponse(msg);
                         setTimeout(() => setAssistantResponse(null), 4000);
-                        finalQty = available;
+                        finalQty = maxAllowedTotal;
                     }
 
                     if (finalQty > 0) {
@@ -286,7 +362,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     isProcessingChunk.current = false;
                 });
             }
-        }, 2200);
+        }, 1200);
 
         return () => {
             if (processingTimeoutRef.current) clearTimeout(processingTimeoutRef.current);
@@ -324,6 +400,48 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 return;
             }
 
+            // --- MANEJO DE BORRADO Y CORRECCIÓN EN CARRITO ---
+            const lowerText = text.toLowerCase().trim();
+            if (lowerText.startsWith("borrar ") || lowerText.startsWith("eliminar ")) {
+                const searchItem = lowerText.replace("borrar ", "").replace("eliminar ", "").trim();
+                if (searchItem.length > 2) {
+                    const matchedProd = findBestProductMatchUnified(searchItem, cart);
+                    if (matchedProd) {
+                        setCart(prev => prev.filter(c => String(c.code) !== String(matchedProd.code)));
+                        const msg = `Eliminado ${matchedProd.name} del carrito`;
+                        speak(msg);
+                        setAssistantResponse(msg);
+                        return;
+                    } else {
+                        speak(`No encontré ${searchItem} en el carrito para borrar`);
+                        return;
+                    }
+                }
+            }
+
+            if (lowerText.startsWith("corregir ") || lowerText.startsWith("cambiar cantidad ")) {
+                const searchItem = lowerText.replace("corregir ", "").replace("cambiar cantidad ", "").trim();
+                if (searchItem.length > 2) {
+                    const localResults = localParse(searchItem, inventory);
+                    if (localResults.length > 0) {
+                        const newProd = localResults[0];
+                        const inCart = cart.find(c => String(c.code) === String(newProd.code));
+                        if (inCart) {
+                            setCart(prev => prev.map(c => 
+                                String(c.code) === String(newProd.code) ? { ...c, qty: newProd.qty, subtotal: newProd.qty * c.price } : c
+                            ));
+                            const msg = `Corregido ${newProd.name} a ${newProd.qty}`;
+                            speak(msg);
+                            setAssistantResponse(msg);
+                            return;
+                        } else {
+                            speak(`No tienes ${newProd.name} en el carrito para corregir`);
+                            return;
+                        }
+                    }
+                }
+            }
+
             // 1. PRIORIDAD LOCAL-FIRST: Try to recognize product locally first
             const localResults = localParse(text, inventory);
 
@@ -331,11 +449,11 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 console.log("[LOCAL] Match Found:", localResults);
                 addItemsToCart(localResults);
                 localResults.forEach(i => {
-                    const qtyStr = Number.isInteger(i.qty) ? i.qty : i.qty.toFixed(3);
+                    const speechQty = formatSpeechQty(i.qty, i.um);
                     if (i.targetSoles) {
-                        speak(`Agregado ${qtyStr} de ${i.name} por ${i.targetSoles} soles`);
+                        speak(`Agregado ${speechQty} de ${i.name} por ${i.targetSoles} soles`);
                     } else {
-                        speak(`Agregado ${i.qty} de ${i.name}`);
+                        speak(`Agregado ${speechQty} de ${i.name}`);
                     }
                     syncInventory(i.name);
                 });
@@ -384,6 +502,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             } else if (text.length > 5) {
                 // Only speak error if the text is substantial (avoid noise feedback)
                 speak("No pude reconocer el pedido");
+                setAssistantResponse("No reconocí: " + text);
             }
         } catch (e) {
             console.error("Voice processing error:", e);
@@ -571,8 +690,10 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     setAssistantResponse(locaText);
                     speak(locaText);
                 } else {
-                    const stockInfo = product.stock > 0
-                        ? `pero veo que tienes ${product.stock} unidades en stock.`
+                    const stockQty = product.stock ?? 0;
+                    const formatted = formatStock(stockQty, product.unidades_base || 1, product.name, product.um || 'und', product.saleType || 'empacado');
+                    const stockInfo = stockQty > 0
+                        ? `pero veo que tienes ${formatted.qty} ${formatted.unit} en stock.`
                         : "y tampoco me figura stock.";
                     const msg = `El producto ${product.name} no tiene ubicación registrada, ${stockInfo}`;
                     setAssistantResponse(msg);
@@ -591,9 +712,9 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             const product = findBestProductMatch(query);
             if (product) {
                 const stockQty = product.stock ?? 0;
-                const um = product.um || 'unidades';
+                const formatted = formatStock(stockQty, product.unidades_base || 1, product.name, product.um || 'und', product.saleType || 'empacado');
                 const msg = stockQty > 0
-                    ? `Tienes ${stockQty} ${um} de ${product.name} en stock.`
+                    ? `Tienes ${formatted.qty} ${formatted.unit} de ${product.name} en stock.`
                     : `No tienes stock de ${product.name}. ¡Hay que reponer!`;
                 setAssistantResponse(msg);
                 speak(msg);
@@ -732,6 +853,49 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             speak("Abriendo lista de asistentes y compradores.");
             return;
         }
+        
+        // 8. MARGEN (Rentabilidad de un producto)
+        if (lowerQuery.includes('margen') || lowerQuery.includes('rentabilidad') || lowerQuery.includes('ganancia')) {
+            const product = findBestProductMatch(query);
+            if (product) {
+                // Si no hay p_u_compra, simulamos un costo del 80% del precio de venta para que siempre dé un valor.
+                const price = product.price;
+                const cost = product.p_u_compra || (price * 0.8);
+                const margenSoles = price - cost;
+                const margenPct = (margenSoles / price) * 100;
+                
+                const msg = `El margen de ${product.name} es de ${margenPct.toFixed(0)}%, lo que equivale a ${margenSoles.toFixed(2)} soles de ganancia por unidad.`;
+                setAssistantResponse(msg);
+                speak(msg);
+            } else {
+                speak("No encontré el producto para calcular el margen.");
+            }
+            return;
+        }
+
+        // 9. PEDIDO A PROVEEDOR (Vía WhatsApp)
+        if (lowerQuery.includes('pedir') || lowerQuery.includes('pedido') || lowerQuery.includes('proveedor') || lowerQuery.includes('comprar')) {
+            const product = findBestProductMatch(query);
+            if (product) {
+                // Parse amount from query or default to some amount
+                const numMatch = query.match(/(\d+(?:[.,]\d+)?)/);
+                const cantidad = numMatch ? parseFloat(numMatch[1]) : 10;
+                const unit = product.um || 'unidades';
+
+                const phone = '51999999999'; // Número dummy del proveedor principal
+                const message = encodeURIComponent(`Hola proveedor, necesito pedir ${cantidad} ${unit} de ${product.name} para Caserita Smart. Por favor confirmar disponibilidad.`);
+                
+                const msg = `Generando pedido a proveedor por ${cantidad} ${unit} de ${product.name}. Abriendo WhatsApp.`;
+                setAssistantResponse(msg);
+                speak(msg);
+                window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+            } else {
+                // Si no encuentra producto, abre el modal de proveedores
+                setShowProveedores(true);
+                speak("Abriendo panel de Proveedores y Gastos.");
+            }
+            return;
+        }
 
         // Fallback final
         const finalMsg = "Soy tu asistente. Pregúntame sobre precios, stock o dile 'Ver Cámaras' o 'Alertas'.";
@@ -742,7 +906,19 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const handleAiResult = (data: any) => {
         setVoiceMatches([]); // Reset matches when new result arrives
         if (data.notFound?.length > 0) {
-            data.notFound.forEach((name: string) => speak(`No existe ${name}`));
+            data.notFound.forEach((name: string) => {
+                const msg = `No vendemos ${name} por el momento`;
+                speak(msg);
+                setAssistantResponse(msg);
+            });
+            // Mantener registro de no encontrados
+            setPendingOrders(prev => [...prev, {
+                cliente_nombre: "No encontrado",
+                monto_total: 0,
+                estado: "Rechazado",
+                productos: data.notFound.join(', '),
+                id: Date.now()
+            }]);
         }
 
         if (data.found?.length > 0) {
@@ -772,7 +948,10 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 // Calcular disponibilidad real considerando el carrito Y lo que ya estamos agregando en este comando
                 const inCart = cart.filter(c => String(c.code) === String(invItem.code)).reduce((sum, c) => sum + Number(c.qty), 0);
                 const alreadyProcessedInThisLoop = toAdd.filter(c => String(c.code) === String(invItem.code)).reduce((sum, c) => sum + Number(c.qty), 0);
-                const available = Math.max(0, invItem.stock - (inCart + alreadyProcessedInThisLoop));
+                const divisor = invItem.unidades_base || 1;
+                const inCartUnits = (inCart + alreadyProcessedInThisLoop) * divisor;
+                const availableUnits = Math.max(0, invItem.stock - inCartUnits);
+                const maxAllowedQty = Math.floor(availableUnits / divisor);
 
                 // Bloqueo absoluto si el stock es 0 o menor
                 if (invItem.stock <= 0) {
@@ -783,27 +962,27 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     return; 
                 }
 
-                if (available <= 0) {
+                if (maxAllowedQty <= 0) {
                     const msg = `este producto ${invItem.name} se ha agotado`;
                     speak(msg);
                     setAssistantResponse(msg);
                     setTimeout(() => setAssistantResponse(null), 4000);
                     return; 
-                } else if (available < item.qty) {
-                    const msg = `Solo quedan ${available} de ${invItem.name}. Ajustando pedido.`;
+                } else if (maxAllowedQty < item.qty) {
+                    const msg = `Solo quedan ${maxAllowedQty} de ${invItem.name}. Ajustando pedido.`;
                     speak(msg);
                     setAssistantResponse(msg);
                     setTimeout(() => setAssistantResponse(null), 4000);
                     
                     const enrichedItem = {
                         ...item,
-                        qty: available,
+                        qty: maxAllowedQty,
                         name: invItem.name,
                         code: invItem.code,
                         price: invItem.price,
                         um: invItem.um,
                         targetSoles: null, // Reset target soles if qty changed
-                        subtotal: available * invItem.price
+                        subtotal: maxAllowedQty * invItem.price
                     };
                     toAdd.push(enrichedItem);
                     setVoiceMatches(prev => [...prev, enrichedItem]);
@@ -819,11 +998,11 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         subtotal: item.qty * invItem.price
                     };
                     toAdd.push(enrichedItem);
-                    const qtyDesc = Number.isInteger(item.qty) ? item.qty : item.qty.toFixed(3);
+                    const speechQty = formatSpeechQty(item.qty, enrichedItem.um);
                     if (item.monto) {
-                        speak(`Agregado ${qtyDesc} de ${invItem.name} por ${item.monto} soles`);
+                        speak(`Agregado ${speechQty} de ${invItem.name} por ${item.monto} soles`);
                     } else {
-                        speak(`Agregado ${qtyDesc} de ${invItem.name}`);
+                        speak(`Agregado ${speechQty} de ${invItem.name}`);
                     }
                     setVoiceMatches(prev => [...prev, enrichedItem]);
                     syncInventory(invItem.name);
@@ -846,6 +1025,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                 category: i.categoria,
                 stock: i.cantidad_ingreso ?? 50,
                 price: i.p_u_venta ?? 1.50,
+                costo_compra: i.costo_compra ?? i.p_u_compra ?? 1.00,
                 ubicacion: i.ubicacion || null,
                 fecha_caducidad: i.fecha_caducidad || null,
                 saleType: 'empacado',
@@ -907,6 +1087,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         category: i.categoria,
                         stock: i.cantidad_ingreso ?? 50,
                         price: i.p_u_venta ?? 1.50,
+                        costo_compra: i.p_u_compra ?? 1.00,
                         ubicacion: i.ubicacion || null,
                         fecha_caducidad: i.fecha_caducidad || null,
                         saleType: 'empacado',
@@ -1063,14 +1244,17 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     c.name.toLowerCase() === invItem.name.toLowerCase()
                 )).reduce((sum, c) => sum + Number(c.qty), 0);
                 
-                const available = Math.max(0, invItem.stock - inCartOthers);
+                const divisor = invItem.unidades_base || 1;
+                const inCartOthersUnits = inCartOthers * divisor;
+                const availableUnits = Math.max(0, invItem.stock - inCartOthersUnits);
+                const maxAllowedQty = Math.floor(availableUnits / divisor);
                 
-                if (newQty > available || available <= 0) {
+                if (newQty > maxAllowedQty || maxAllowedQty <= 0) {
                     const msg = `este producto ${item.name} se ha agotado`;
                     speak(msg);
                     setAssistantResponse(msg);
                     setTimeout(() => setAssistantResponse(null), 4000);
-                    item.qty = available;
+                    item.qty = maxAllowedQty;
                 } else {
                     item.qty = Math.max(0, newQty);
                 }
@@ -1139,18 +1323,37 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         if (receiptType === 'whatsapp' || targetPhone) {
              window.open(`https://wa.me/${targetPhone.replace(/\D/g, '')}?text=${whatsappMsg}`, "_blank");
         }
+
+        // Generar PDF SUNAT si es Boleta o Factura
+        if (receiptType === 'boleta' || receiptType === 'factura') {
+            const customerName = customers.find(c => c.dni === customerTaxId || c.ruc === customerTaxId)?.fullName || sunatName || "CLIENTE VARIOS";
+            generateTicketPDF({
+                receiptType,
+                customerTaxId,
+                customerName,
+                cart: cart,
+                total: total,
+                paymentMethod: method,
+                date: new Date()
+            });
+            speak("Ticket generado. Descargando comprobante.");
+        }
     };
 
     const processSale = async (method: any, customer?: any) => {
         // VALIDACIÓN FINAL DE STOCK ANTES DE PROCESAR
         for (const cartItem of cart) {
             const invItem = inventory.find(i => String(i.code) === String(cartItem.code));
-            if (invItem && invItem.stock < cartItem.qty) {
-                const msg = `Error de Stock: ${cartItem.name} tiene solo ${invItem.stock} unidades. Por favor ajuste el pedido.`;
-                speak(msg);
-                setAssistantResponse(msg);
-                setTimeout(() => setAssistantResponse(null), 5000);
-                return; // ABORTAR VENTA
+            if (invItem) {
+                const requiredUnits = cartItem.qty * (invItem.unidades_base || 1);
+                if (invItem.stock < requiredUnits) {
+                    const maxAllowed = Math.floor(invItem.stock / (invItem.unidades_base || 1));
+                    const msg = `Error de Stock: ${cartItem.name} tiene solo ${maxAllowed} disponibles. Por favor ajuste el pedido.`;
+                    speak(msg);
+                    setAssistantResponse(msg);
+                    setTimeout(() => setAssistantResponse(null), 5000);
+                    return; // ABORTAR VENTA
+                }
             }
         }
 
@@ -1168,7 +1371,8 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             const updatedInventory = inventory.map(item => {
                 const cartItem = cart.find(c => c.code === item.code);
                 if (cartItem) {
-                    return { ...item, stock: Math.max(0, item.stock - cartItem.qty) };
+                    const divisor = item.unidades_base || 1;
+                    return { ...item, stock: Math.max(0, item.stock - (cartItem.qty * divisor)) };
                 }
                 return item;
             });
@@ -1208,6 +1412,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                     category: i.categoria,
                                     stock: i.cantidad_ingreso ?? 50,
                                     price: i.p_u_venta ?? 1.50,
+                                    costo_compra: i.p_u_compra ?? 1.00,
                                     ubicacion: i.ubicacion || null,
                                     fecha_caducidad: i.fecha_caducidad || null,
                                     saleType: 'empacado',
@@ -1264,7 +1469,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         }
     };
 
-    const [activeTab, setActiveTab] = useState<'pedidos' | 'inventario' | 'acciones'>('pedidos');
+    const [activeTab, setActiveTab] = useState<'pedidos' | 'inventario' | 'reportes' | 'cámaras' | 'config' | 'acciones'>('pedidos');
     const [isMobile, setIsMobile] = useState(false);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -1274,6 +1479,23 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         window.addEventListener('resize', check);
         return () => window.removeEventListener('resize', check);
     }, []);
+
+    // --- MOCK SUNAT VALIDATION ---
+    useEffect(() => {
+        if ((customerTaxId.length === 8 || customerTaxId.length === 11) && !customers.some(c => c.dni === customerTaxId || c.ruc === customerTaxId)) {
+            setIsValidatingSunat(true);
+            setSunatName("");
+            const timer = setTimeout(() => {
+                setSunatName(customerTaxId.length === 11 ? "EMPRESA EJEMPLO S.A.C." : "JUAN PEREZ (DNI)");
+                setIsValidatingSunat(false);
+            }, 1500);
+            return () => clearTimeout(timer);
+        } else {
+            setIsValidatingSunat(false);
+            setSunatName("");
+        }
+    }, [customerTaxId, customers]);
+
     const isTrialExpired = subStatus === 'trial' && trialEndsAt && new Date(trialEndsAt) < new Date();
 
     const handleActivate = async () => {
@@ -1329,6 +1551,50 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         <main style={isMobile ? { height: '100dvh', overflow: 'auto', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-col h-screen overflow-hidden bg-slate-200'}>
             <Header onLogout={onLogout} aiMode={aiMode} onModeChange={setAiMode} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} />
 
+            {/* ONBOARDING GUIDE — only for new users */}
+            {showOnboarding && userId && (
+                <OnboardingGuide
+                    caseroId={userId}
+                    catalogUrl={catalogUrl}
+                    onComplete={(data) => {
+                        setShowOnboarding(false);
+                        console.log('Onboarding complete:', data);
+                    }}
+                    onSkip={() => setShowOnboarding(false)}
+                />
+            )}
+
+            {/* PRICING PANEL */}
+            {showPricing && (
+                <PricingPanel
+                    currentPlan={caseroSubscription}
+                    showAsModal={true}
+                    onSelectPlan={(plan) => {
+                        setCaseroSubscription(plan);
+                        setShowPricing(false);
+                    }}
+                    onClose={() => setShowPricing(false)}
+                />
+            )}
+
+            {/* FEEDBACK PANEL — for free plan renewal */}
+            {showFeedback && userId && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    style={{ background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}>
+                    <div className="w-full max-w-sm bg-gradient-to-b from-slate-900 to-indigo-950 rounded-2xl border border-white/10 shadow-2xl"
+                        style={{ maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <div className="flex justify-end px-4 pt-3">
+                            <button onClick={() => setShowFeedback(false)}
+                                className="text-slate-400 hover:text-white text-xs">✕ Cerrar</button>
+                        </div>
+                        <FeedbackPanel
+                            caseroId={userId}
+                            onSubmitted={() => setTimeout(() => setShowFeedback(false), 2000)}
+                        />
+                    </div>
+                </div>
+            )}
+
             {/* Asistente Toast (si hay mensaje) */}
             {assistantResponse && (
                 <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[100] animate-in slide-in-from-top-4 fade-in duration-300 pointer-events-none">
@@ -1367,44 +1633,70 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
             {/* ===== DESKTOP LAYOUT ===== */}
             {!isMobile && (
-                <div className="flex flex-1 gap-3 p-3 min-h-0">
-                    <div className="flex-[2] flex flex-col gap-3">
-                        <OrderPanel cart={cart} onRemove={removeFromCart} onUpdateQty={updateCartQty} onManualEntry={() => speak("Pedido manual iniciado")} />
-                        <PaymentMethods onPayment={handlePayment} />
+                <div className="flex flex-1 overflow-hidden">
+                    {/* FIXED SIDEBAR DESKTOP */}
+                    <div className="w-24 bg-slate-900 text-slate-400 flex flex-col items-center py-6 gap-8 shadow-xl z-20 shrink-0">
+                        <button onClick={() => setActiveTab('pedidos')} className={`flex flex-col items-center gap-2 transition-all hover:text-white ${activeTab === 'pedidos' ? 'text-emerald-400 scale-110' : ''}`}>
+                            <Store className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Caja</span>
+                        </button>
+                        <button onClick={() => { setActiveTab('inventario'); setShowMaster(true); }} className={`flex flex-col items-center gap-2 transition-all hover:text-white ${activeTab === 'inventario' ? 'text-emerald-400 scale-110' : ''}`}>
+                            <Database className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Catálogo</span>
+                        </button>
+                        <button onClick={() => { setActiveTab('reportes'); setShowReports(true); }} className={`flex flex-col items-center gap-2 transition-all hover:text-white ${activeTab === 'reportes' ? 'text-emerald-400 scale-110' : ''}`}>
+                            <BarChart className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Finanzas</span>
+                        </button>
+                        <button onClick={() => { setActiveTab('cámaras'); setShowSecurityPanel(true); }} className={`flex flex-col items-center gap-2 transition-all hover:text-white ${activeTab === 'cámaras' ? 'text-emerald-400 scale-110' : ''}`}>
+                            <Camera className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Cámaras</span>
+                        </button>
+                        <div className="flex-1"></div>
+                        <button onClick={() => setShowConfig(true)} className="flex flex-col items-center gap-2 transition-all hover:text-white">
+                            <Settings className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Ajustes</span>
+                        </button>
                     </div>
-                    <div className="flex-[2] flex flex-col">
-                        <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
-                    </div>
-                    <div className="flex-[1] flex flex-col">
-                        <ActionPanel
-                            isListening={isListening}
-                            isProcessing={isProcessing}
-                            pendingOrdersCount={pendingOrders.filter(o => o.estado === 'pendiente').length}
-                            onToggleListening={() => {
-                                setPendingCatalogAction(null); // Reset SIEMPRE al tocar el micro
-                                setAssistantResponse(null);
-                                if (typeof window !== "undefined" && "speechSynthesis" in window) {
-                                    window.speechSynthesis.cancel();
-                                }
-                                if (isListening) {
-                                    stopListening();
-                                } else {
-                                    startListening();
-                                }
-                            }}
-                            onOpenConfig={() => setShowConfig(true)}
-                            onOpenScanner={() => setShowScanner(true)}
-                            onOpenMaster={() => setShowMaster(true)}
-                            onOpenFiados={() => setShowFiados(true)}
-                            onExport={() => setShowReports(true)}
-                            onOpenQR={() => setShowQR(true)}
-                            onOpenBuyers={() => setShowBuyers(true)}
-                            onOpenProveedores={() => setShowProveedores(true)}
-                            onOpenLiveMonitor={() => setShowLiveMonitor(true)}
-                            onOpenSecurity={() => setShowSecurityPanel(true)}
-                            onPanic={triggerPanicAction}
-                            onOpenWhatsApp={() => { const message = encodeURIComponent("📢 *Caserita Smart* trae ofertas hoy:\n\n" + inventory.slice(0, 5).map(i => `✅ ${i.name} a S/ ${i.price.toFixed(2)}`).join("\n")); window.open(`https://wa.me/?text=${message}`, "_blank"); }}
-                        />
+
+                    {/* MAIN CONTENT AREA */}
+                    <div className="flex-1 bg-slate-100 overflow-hidden flex flex-col p-4 relative">
+                        {activeTab === 'pedidos' && (
+                            <div className="flex flex-1 gap-4 overflow-hidden">
+                                {/* Zona Izquierda: Buscador e Inventario visual */}
+                                <div className="flex-[3] flex flex-col overflow-hidden bg-white rounded-3xl shadow-sm border border-slate-200">
+                                     <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
+                                </div>
+                                
+                                {/* Zona Derecha: Carrito y Cobro */}
+                                <div className="flex-[2] flex flex-col gap-4 overflow-hidden">
+                                    <div className="flex-[3] overflow-hidden bg-white rounded-3xl shadow-sm border border-slate-200">
+                                        <OrderPanel cart={cart} onRemove={removeFromCart} onUpdateQty={updateCartQty} onManualEntry={() => speak("Pedido manual iniciado")} />
+                                    </div>
+                                    <div className="flex-[1] shrink-0 bg-white rounded-3xl shadow-sm border border-slate-200 p-2">
+                                        <PaymentMethods onPayment={handlePayment} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab !== 'pedidos' && (
+                            <div className="flex flex-1 items-center justify-center bg-white rounded-3xl shadow-sm border border-slate-200 text-slate-400 flex-col gap-4">
+                                <Store className="w-16 h-16 opacity-20" />
+                                <p className="text-lg font-bold">Has abierto un módulo en ventana flotante.</p>
+                                <button onClick={() => setActiveTab('pedidos')} className="px-6 py-2 bg-emerald-500 text-white font-bold rounded-full hover:bg-emerald-600 transition-colors">Volver a la Caja</button>
+                            </div>
+                        )}
+
+                        {/* Botón Flotante para Micrófono (Reemplaza al del ActionPanel) */}
+                        <div className="absolute bottom-8 left-8 flex flex-col gap-4 z-50">
+                             <button
+                                onClick={() => { if (isListening) stopListening(); else startListening(); }}
+                                className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-[#1f5f36] hover:bg-[#2a7a48]'} hover:scale-110 active:scale-95`}
+                             >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                             </button>
+                        </div>
                     </div>
                 </div>
             )}
@@ -1488,6 +1780,11 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         <button onClick={() => { const message = encodeURIComponent("📢 *Caserita Smart* trae ofertas hoy:\n\n" + inventory.slice(0, 5).map(i => `✅ ${i.name} a S/ ${i.price.toFixed(2)}`).join("\n")); window.open(`https://wa.me/?text=${message}`, "_blank"); }} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#34d399', background: 'none', border: 'none' }}>
                             <MessageCircle className="w-5 h-5" />
                             <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Promo</span>
+                        </button>
+
+                        <button onClick={() => setShowPromotions(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#818cf8', background: 'none', border: 'none' }}>
+                            <Sparkles className="w-5 h-5" />
+                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#818cf8' }}>Kits IA</span>
                         </button>
 
                         <button onClick={() => setShowReports(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#fbbf24', background: 'none', border: 'none' }}>
@@ -1637,16 +1934,33 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             />
             <QRModal isOpen={showQR} onClose={() => setShowQR(false)} isOwner={isOwner} userId={userId} />
             <ConfigModal isOpen={showConfig} onClose={() => setShowConfig(false)} userId={userId} cajeroNombre={cajeroNombre} isOwner={isOwner} />
+            <PromotionsModal 
+                isOpen={showPromotions} 
+                onClose={() => setShowPromotions(false)} 
+                inventory={inventory} 
+                onApplyCombo={(combo) => {
+                    const newCart = [...cart];
+                    combo.products.forEach(p => {
+                        const existing = newCart.find(item => item.id === p.id);
+                        if (existing) {
+                            existing.quantity += (p.quantity || 1);
+                        } else {
+                            newCart.push({ ...p, quantity: p.quantity || 1 });
+                        }
+                    });
+                    setCart(newCart);
+                }} 
+            />
             <BuyersListModal
                 isOpen={showBuyers}
                 onClose={() => setShowBuyers(false)}
                 onAddItemsToCart={addItemsToCart}
                 realtimeOrders={pendingOrders}
             />
-            <ProveedoresModal isOpen={showProveedores} onClose={() => setShowProveedores(false)} inventory={inventory} />
+            <ProveedoresModal isOpen={showProveedores} onClose={() => setShowProveedores(false)} inventory={inventory} userId={userId} />
             <ProductMasterModal isOpen={showMaster} onClose={() => setShowMaster(false)} inventory={inventory} setInventory={setInventory} isOwner={isOwner} userId={userId} />
             <FastScannerModal isOpen={showScanner} onClose={() => setShowScanner(false)} inventory={inventory} setInventory={setInventory} onAddToCart={addItemsToCart} userId={userId} cajeroNombre={cajeroNombre} />
-            <ReportesModal isOpen={showReports} onClose={() => setShowReports(false)} sales={sales} compras={[]} gastos={[]} customers={customers} />
+            <ReportesModal isOpen={showReports} onClose={() => setShowReports(false)} sales={sales} compras={[]} gastos={[]} customers={customers} inventory={inventory} />
             <LiveMonitorModal isOpen={showLiveMonitor} onClose={() => setShowLiveMonitor(false)} userId={userId || ""} />
             <SecurityPanel isOpen={showSecurityPanel} onClose={() => setShowSecurityPanel(false)} />
 
@@ -1692,17 +2006,19 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Documento de Identidad (RUC/DNI)</label>
                                     <div className="relative">
                                         <input
-                                            type="number"
+                                            type="text"
+                                            inputMode="numeric"
+                                            pattern="[0-9]*"
                                             value={customerTaxId}
                                             onChange={(e) => {
-                                                const val = e.target.value;
+                                                const val = e.target.value.replace(/[^0-9]/g, '');
                                                 setCustomerTaxId(val);
                                                 // Búsqueda automática simple en el estado global
                                                 const match = customers.find(c => c.dni === val || c.ruc === val);
                                                 if (match) speak(`Cliente ${match.fullName} reconocido.`);
                                             }}
                                             placeholder={receiptType === 'factura' ? "Ingrese RUC (11 dígitos)" : "Ingrese DNI o RUC"}
-                                            className="w-full bg-slate-100 border-2 border-slate-200 rounded-2xl px-6 py-4 font-bold text-lg focus:border-emerald-500 outline-none transition-all"
+                                            className="w-full bg-slate-100 border-2 border-slate-200 rounded-2xl px-6 py-4 font-bold text-lg text-slate-900 focus:border-emerald-500 outline-none transition-all"
                                         />
                                         <div className="absolute right-4 top-1/2 -translate-y-1/2">
                                             {customers.some(c => c.dni === customerTaxId || c.ruc === customerTaxId) ? (
@@ -1713,10 +2029,21 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                         </div>
                                     </div>
                                     {/* Mostrar nombre si existe */}
-                                    {customers.find(c => c.dni === customerTaxId || c.ruc === customerTaxId) && (
+                                    {customers.find(c => c.dni === customerTaxId || c.ruc === customerTaxId) ? (
                                         <div className="bg-emerald-50 text-emerald-700 px-4 py-2 rounded-xl text-xs font-bold border border-emerald-100">
                                             ✅ Cliente: {customers.find(c => c.dni === customerTaxId || c.ruc === customerTaxId)?.fullName}
                                         </div>
+                                    ) : (
+                                        isValidatingSunat ? (
+                                            <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-xs font-bold border border-blue-100 flex items-center gap-2 animate-pulse">
+                                                <div className="w-3 h-3 rounded-full border-2 border-blue-500 border-t-transparent animate-spin"></div>
+                                                Validando con SUNAT / PSE...
+                                            </div>
+                                        ) : sunatName ? (
+                                            <div className="bg-blue-50 text-blue-700 px-4 py-2 rounded-xl text-xs font-bold border border-blue-100">
+                                                ✅ Registrado en SUNAT: {sunatName}
+                                            </div>
+                                        ) : null
                                     )}
                                 </div>
                             )}

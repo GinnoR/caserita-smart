@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import dynamic from 'next/dynamic';
-import { AuthScreen } from "@/components/AuthScreen";
+import { LandingScreen } from "@/components/LandingScreen";
 import { createClient } from "@/utils/supabase/client";
 
 const Dashboard = dynamic(() => import('@/components/Dashboard'), { ssr: false });
@@ -35,21 +35,11 @@ export default function Home() {
     setCajeroNombre('Dueño/a');
   };
 
-  const handleLoginSuccess = (id: string, nombre: string) => {
-    console.log("🎯 Login Exitoso en Page:", { id, nombre });
-    setUserId(id);
-    setCajeroNombre(nombre);
-  };
-
-  useEffect(() => {
-    console.log("🏠 Estado actual de userId:", userId);
-  }, [userId]);
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-white/60 font-medium">Verificando sesión...</p>
         </div>
       </div>
@@ -57,7 +47,7 @@ export default function Home() {
   }
 
   if (!userId) {
-    return <AuthScreen onLoginSuccess={handleLoginSuccess} />;
+    return <LandingScreen />;
   }
 
   return <Dashboard userId={userId} cajeroNombre={cajeroNombre} onLogout={handleLogout} />;

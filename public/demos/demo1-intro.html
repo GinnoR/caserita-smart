@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Demo 1 — Caserita Smart: El Gancho</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:#0a0e1a;font-family:'Outfit',sans-serif;overflow:hidden;width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;}
+
+  .scene{position:relative;width:100vw;height:100vh;background:linear-gradient(135deg,#0a0e1a 0%,#0d2818 50%,#0a0e1a 100%);}
+
+  /* Bodega background */
+  .bodega-bg{position:absolute;inset:0;background:url('https://images.unsplash.com/photo-1604719312566-8912e9227c6a?w=1920&q=80') center/cover;opacity:0.15;filter:saturate(0.5);}
+  .overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,26,0.4) 0%,rgba(10,14,26,0.7) 100%);}
+
+  /* Particles */
+  .particles{position:absolute;inset:0;overflow:hidden;}
+  .p{position:absolute;width:3px;height:3px;border-radius:50%;background:#10b981;animation:float var(--d,4s) ease-in-out infinite;opacity:0.6;}
+  @keyframes float{0%,100%{transform:translateY(0) scale(1);}50%{transform:translateY(-30px) scale(1.5);opacity:1;}}
+
+  /* Main content */
+  .content{position:relative;z-index:10;text-align:center;padding:40px;}
+
+  .logo{font-size:18px;color:#10b981;letter-spacing:8px;text-transform:uppercase;opacity:0;animation:fadeUp 0.8s 0.5s forwards;}
+  .icon{font-size:80px;opacity:0;animation:popIn 0.6s 1s cubic-bezier(0.34,1.56,0.64,1) forwards;}
+  
+  .headline{margin-top:20px;opacity:0;animation:fadeUp 0.8s 1.5s forwards;}
+  .headline h1{font-size:clamp(32px,6vw,72px);font-weight:900;color:white;line-height:1.1;}
+  .headline h1 span{color:#10b981;}
+  .headline .sub{font-size:clamp(14px,2vw,22px);color:#94a3b8;margin-top:12px;}
+
+  .badge{display:inline-block;margin-top:24px;background:linear-gradient(90deg,#10b981,#059669);color:white;padding:12px 32px;border-radius:100px;font-size:18px;font-weight:700;opacity:0;animation:fadeUp 0.8s 2.2s forwards;box-shadow:0 0 40px rgba(16,185,129,0.5);}
+
+  .stats{display:flex;gap:40px;justify-content:center;margin-top:40px;flex-wrap:wrap;}
+  .stat{opacity:0;text-align:center;}
+  .stat:nth-child(1){animation:fadeUp 0.6s 2.8s forwards;}
+  .stat:nth-child(2){animation:fadeUp 0.6s 3.1s forwards;}
+  .stat:nth-child(3){animation:fadeUp 0.6s 3.4s forwards;}
+  .stat .num{font-size:42px;font-weight:900;color:#10b981;}
+  .stat .label{font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:2px;}
+
+  .cta{margin-top:50px;opacity:0;animation:fadeUp 0.8s 3.8s forwards;}
+  .cta p{color:#94a3b8;font-size:16px;}
+  .cta strong{color:#fbbf24;}
+
+  /* Wave bar bottom */
+  .wave-bar{position:absolute;bottom:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#10b981,#0ea5e9,#8b5cf6,#10b981);background-size:200%;animation:wave 3s linear infinite;}
+  @keyframes wave{0%{background-position:0%}100%{background-position:200%}}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(30px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes popIn{from{opacity:0;transform:scale(0.3) rotate(-10deg);}to{opacity:1;transform:scale(1) rotate(0);}}
+
+  /* Progress bar */
+  .progress{position:absolute;bottom:4px;left:0;height:4px;background:rgba(255,255,255,0.3);animation:progress 8s linear forwards;}
+  @keyframes progress{from{width:0}to{width:100%}}
+</style>
+</head>
+<body>
+<div class="scene">
+  <div class="bodega-bg"></div>
+  <div class="overlay"></div>
+  <div class="particles" id="particles"></div>
+  
+  <div class="content">
+    <div class="logo">🌿 Caserita Smart</div>
+    <div class="icon">🏪</div>
+    <div class="headline">
+      <h1>¿Cuadernos y<br><span>calculadoras?</span></h1>
+      <p class="sub">Ya hay una manera más inteligente de manejar tu bodega</p>
+    </div>
+    <div class="badge">⚡ La app que entiende tu voz</div>
+    <div class="stats">
+      <div class="stat"><div class="num">🎤</div><div class="label">Control por Voz</div></div>
+      <div class="stat"><div class="num">📋</div><div class="label">Fiados Digital</div></div>
+      <div class="stat"><div class="num">🛡️</div><div class="label">Modo Pánico</div></div>
+    </div>
+    <div class="cta">
+      <p>Regístrate gratis en <strong>caseritasmart.cloud</strong></p>
+    </div>
+  </div>
+  <div class="wave-bar"></div>
+  <div class="progress"></div>
+</div>
+<script>
+// Generate floating particles
+const container = document.getElementById('particles');
+for(let i=0;i<20;i++){
+  const p=document.createElement('div');
+  p.className='p';
+  p.style.cssText=`left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${3+Math.random()*4}s;animation-delay:${Math.random()*3}s;background:${['#10b981','#0ea5e9','#8b5cf6','#fbbf24'][Math.floor(Math.random()*4)]};`;
+  container.appendChild(p);
+}
+// Auto-restart after 9s for loop
+setTimeout(()=>location.reload(),9000);
+</script>
+</body>
+</html>

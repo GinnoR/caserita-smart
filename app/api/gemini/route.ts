@@ -65,7 +65,7 @@ Responde SOLO un JSON (sin markdown) con este formato:
 }
 `;
 
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
         const result = await model.generateContent(prompt);
         const rawResponse = result.response.text();
 

@@ -1,0 +1,14 @@
+scratch/
+demos/
+SUPERADO/
+*.xlsx
+*.pdf
+*.mp4
+*.exe
+*.vbs
+*.bat
+*.cjs
+*.zip
+*.log
+plan_extracted/
+go2rtc*

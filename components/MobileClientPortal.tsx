@@ -63,9 +63,9 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                 const { data, error } = await supabase
                     .from('ingres_produc')
                     .select(`
-                        id, cantidad_ingreso, p_u_venta,
+                        id, cantidad_ingreso, p_u_venta, custom_image_url,
                         inventario (
-                            id, cod_bar_produc, nombre_producto, um, unidades_base
+                            id, cod_bar_produc, nombre_producto, um, unidades_base, image_url
                         )
                     `)
                     .eq('cod_casero', uid);
@@ -87,7 +87,8 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                         um: p.um || 'und',
                         unidades_base: p.unidades_base || 1,
                         sale_type: p.sale_type || 'empacado',
-                        stock: 50
+                        stock: 50,
+                        image_url: p.image_url
                     })));
                 } else {
                     setProducts(data.map((row: any) => ({
@@ -98,7 +99,8 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                         um: row.inventario.um || 'und',
                         unidades_base: row.inventario.unidades_base || 1,
                         sale_type: row.inventario.sale_type || 'empacado',
-                        stock: row.cantidad_ingreso || 0
+                        stock: row.cantidad_ingreso || 0,
+                        image_url: row.custom_image_url || row.inventario.image_url
                     })));
                 }
                 setFetchError(null);
@@ -150,9 +152,10 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
             try {
                 const { data } = await supabase
                     .from('cliente_casero')
-                    .select('telefono, nombre_vendedor, yape_number, plin_number, bank_account_details')
+                    .select('telefono, nombre_vendedor')
                     .eq('cod_casero', uid)
                     .maybeSingle();
+
 
                 if (data) {
                     if (data.telefono) setMerchantPhone(data.telefono);
@@ -533,7 +536,13 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
         }
     }, [submitted]);
 
-    if (!mounted) return null;
+    if (!mounted) return (
+        <div className="flex flex-col h-[100dvh] bg-slate-50 max-w-md mx-auto items-center justify-center gap-4">
+            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+            <p className="text-slate-500 text-sm font-semibold">Cargando catálogo...</p>
+        </div>
+    );
+
 
     const totalCart = cart.reduce((acc, item) => acc + (item.subtotal || 0), 0);
 
@@ -803,7 +812,13 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                                     
                                     return (
                                         <div key={idx} onClick={() => handleManualAdd(product)} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-md transition-shadow active:scale-[0.98] cursor-pointer relative overflow-hidden group">
-                                            <div className="text-[9px] text-slate-300 font-bold mb-1 truncate">{product.code}</div>
+                                            {product.image_url ? (
+                                                <div className="w-20 h-20 mx-auto mb-2 mix-blend-multiply">
+                                                    <img src={product.image_url} alt={product.name} className="w-full h-full object-contain drop-shadow-sm" />
+                                                </div>
+                                            ) : (
+                                                <div className="text-[9px] text-slate-300 font-bold mb-1 truncate">{product.code}</div>
+                                            )}
                                             <div className="font-black text-slate-900 text-sm leading-tight mb-2 line-clamp-2 uppercase h-10">{product.name}</div>
                                             
                                             <div className="space-y-1 mb-3">

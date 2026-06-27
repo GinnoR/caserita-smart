@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, TrendingUp, TrendingDown, Calendar, DollarSign, Download, Filter, BarChart2, Lightbulb, Activity, PackageMinus, Zap, ShieldAlert, Users, Receipt, LineChart, Wallet } from "lucide-react";
+import { X, TrendingUp, TrendingDown, Calendar, DollarSign, Download, Filter, BarChart2, Lightbulb, Activity, PackageMinus, Zap, ShieldAlert, Users, Receipt, LineChart, Wallet, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ReportesModalProps {
@@ -9,9 +9,10 @@ interface ReportesModalProps {
     compras: any[];
     gastos: any[];
     customers?: any[]; // added for "Cuentas por Cobrar" calculation
+    inventory?: any[]; // added for "Inventario Valorizado" calculation
 }
 
-export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gastos = [], customers = [] }: ReportesModalProps) {
+export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gastos = [], customers = [], inventory = [] }: ReportesModalProps) {
     const [activeTab, setActiveTab] = useState<'resumen' | 'tendencias' | 'sugerencias'>('resumen');
     const [dateRange, setDateRange] = useState<'today' | 'week' | 'month'>('month');
 
@@ -52,6 +53,18 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
 
     // 5. Endeudamiento (Cuentas por cobrar - Fiados)
     const cuentasPorCobrar = customers?.reduce((sum, c) => sum + (c.currentDebt || 0), 0) || 0;
+
+    // 6. Inventario Físico Valorizado en base a la mínima unidad indivisible (Opción B)
+    const totalInventarioValorizado = (inventory || []).reduce((sum, item) => {
+        const stockUnidades = item.stock || 0;
+        const costoBulto = item.costo_compra || 0;
+        const unidadesBase = item.unidades_base || 1;
+        
+        // Costo por unidad indivisible = costoBulto / unidadesBase
+        const costoUnidad = costoBulto / unidadesBase;
+        
+        return sum + (stockUnidades * costoUnidad);
+    }, 0);
 
     // --- LÓGICA DEL SIMULADOR DE FLUJO ---
     // Promedio diario basado en ventas actuales (si 0, asumimos base de S/ 150/día para que no se rompa la vista)
@@ -242,19 +255,19 @@ export function ReportesModal({ isOpen, onClose, sales = [], compras = [], gasto
                                     <p className="text-xs text-slate-500 font-medium mt-4 relative z-10">{cantidadVentas} ventas registradas</p>
                                 </div>
 
-                                {/* Costo Mercadería */}
+                                {/* Inventario Físico Valorizado */}
                                 <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 relative overflow-hidden group hover:shadow-md transition-all">
                                     <div className="absolute top-0 right-0 w-24 h-24 bg-orange-100 rounded-bl-[100px] -z-0 opacity-50 transition-transform"></div>
                                     <div className="flex justify-between items-start mb-2 relative z-10">
                                         <div>
-                                            <p className="text-slate-500 font-bold text-sm uppercase tracking-wider">Compras</p>
-                                            <h3 className="text-2xl font-black text-slate-800 mt-1">S/ {mockCostoMercaderia.toFixed(2)}</h3>
+                                            <p className="text-slate-500 font-bold text-sm uppercase tracking-wider">Inventario Valorizado</p>
+                                            <h3 className="text-2xl font-black text-slate-800 mt-1">S/ {totalInventarioValorizado.toFixed(2)}</h3>
                                         </div>
                                         <div className="bg-orange-100 p-2 rounded-xl">
-                                            <PackageMinus className="w-5 h-5 text-orange-600" />
+                                            <Package className="w-5 h-5 text-orange-600" />
                                         </div>
                                     </div>
-                                    <p className="text-xs text-slate-500 font-medium mt-4 relative z-10">Inversión calculada</p>
+                                    <p className="text-xs text-slate-500 font-medium mt-4 relative z-10">Total a costo de compra (unidades)</p>
                                 </div>
 
                                 {/* Gastos Operativos */}

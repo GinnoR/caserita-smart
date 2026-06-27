@@ -1,0 +1,74 @@
+[
+  {
+    "barcode": "101209159",
+    "product_name": "Producto Peruano Prueba 1",
+    "category": "Abarrotes",
+    "brand": "GenÃ©rica",
+    "rubro": "Bodega",
+    "created_at": "2026-03-10T06:05:57.988731+00:00",
+    "created_by": null
+  },
+  {
+    "barcode": "105000011",
+    "product_name": "Producto Peruano Prueba 2",
+    "category": "Abarrotes",
+    "brand": "GenÃ©rica",
+    "rubro": "Bodega",
+    "created_at": "2026-03-10T06:05:57.988731+00:00",
+    "created_by": null
+  },
+  {
+    "barcode": "105000042",
+    "product_name": "Producto Peruano Prueba 3",
+    "category": "Abarrotes",
+    "brand": "GenÃ©rica",
+    "rubro": "Bodega",
+    "created_at": "2026-03-10T06:05:57.988731+00:00",
+    "created_by": null
+  },
+  {
+    "barcode": "105000059",
+    "product_name": "Producto Peruano Prueba 4",
+    "category": "Abarrotes",
+    "brand": "GenÃ©rica",
+    "rubro": "Bodega",
+    "created_at": "2026-03-10T06:05:57.988731+00:00",
+    "created_by": null
+  },
+  {
+    "barcode": "105000073",
+    "product_name": "Producto Peruano Prueba 5",
+    "category": "Abarrotes",
+    "brand": "GenÃ©rica",
+    "rubro": "Bodega",
+    "created_at": "2026-03-10T06:05:57.988731+00:00",
+    "created_by": null
+  },
+  {
+    "barcode": "105000196",
+    "product_name": "Clavo de 1 Pulgada",
+    "category": "ConstrucciÃ³n",
+    "brand": "Aceros",
+    "rubro": "Obra",
+    "created_at": "2026-03-10T06:05:57.988731+00:00",
+    "created_by": null
+  },
+  {
+    "barcode": "105000219",
+    "product_name": "Arena Fina x bolsa",
+    "category": "ConstrucciÃ³n",
+    "brand": "GenÃ©rica",
+    "rubro": "Obra",
+    "created_at": "2026-03-10T06:05:57.988731+00:00",
+    "created_by": null
+  },
+  {
+    "barcode": "105000318",
+    "product_name": "Martillo Goma",
+    "category": "Herramientas",
+    "brand": "Stanley",
+    "rubro": "FerreterÃ­a",
+    "created_at": "2026-03-10T06:05:57.988731+00:00",
+    "created_by": null
+  }
+]

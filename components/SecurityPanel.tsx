@@ -5,6 +5,7 @@ import { useState, useRef, useEffect } from "react";
 import { Camera, X, Play, Settings, Shield, Maximize2, RefreshCw, Power, AlertTriangle, Bell, BellOff } from "lucide-react";
 import { playSiren, stopSirenInternal } from "@/lib/siren-utils";
 import { createClient } from "@/utils/supabase/client";
+import { useEmergencyStore } from "@/lib/emergency-store";
 
 interface SecurityPanelProps {
     isOpen: boolean;
@@ -20,13 +21,33 @@ interface CameraConfig {
 }
 
 export function SecurityPanel({ isOpen, onClose }: SecurityPanelProps) {
+    const triggerEmergency = useEmergencyStore(s => s.triggerEmergency);
+    const isEmergencyActive = useEmergencyStore(s => s.isActive);
     const [refreshKey, setRefreshKey] = useState(0);
-    const [cameras, setCameras] = useState<CameraConfig[]>([
-        { id: "1", name: "PS3 Eye (Vigilancia)", url: "externa", type: "Domo", status: "offline" },
-        { id: "2", name: "Laptop HP (Caja)", url: "caja", type: "Domo", status: "offline" },
-        { id: "3", name: "Temu 1 (Fachada)", url: "temu", type: "Bala", status: "offline" },
-        { id: "4", name: "Temu 2 (Entrada)", url: "temu", type: "Bala", status: "offline" },
-    ]);
+    const [cameras, setCameras] = useState<CameraConfig[]>([]);
+
+    useEffect(() => {
+        const saved = localStorage.getItem('caserita_nvr_config');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                if (!parsed.find((c: CameraConfig) => c.id === "4")) {
+                    parsed.push({ id: "4", name: "Cámara Temu (IP)", url: "temu", type: "Domo", status: "offline" });
+                    localStorage.setItem('caserita_nvr_config', JSON.stringify(parsed));
+                }
+                setCameras(parsed);
+            } catch(e) {
+                console.error("Error loading NVR config", e);
+            }
+        } else {
+            setCameras([
+                { id: "1", name: "PS3 Eye (Vigilancia)", url: "externa", type: "Webcam", status: "offline" },
+                { id: "2", name: "Laptop HP (Caja)", url: "caja", type: "Webcam", status: "offline" },
+                { id: "3", name: "NVR Dahua (Pasillo)", url: "http://192.168.1.100:8080/video", type: "Domo", status: "offline" },
+                { id: "4", name: "Cámara Temu (IP)", url: "temu", type: "Domo", status: "offline" }
+            ]);
+        }
+    }, []);
 
     const videoRef = useRef<HTMLVideoElement>(null);
     const [stream, setStream] = useState<MediaStream | null>(null);
@@ -150,12 +171,15 @@ export function SecurityPanel({ isOpen, onClose }: SecurityPanelProps) {
 
     // Función para capturar y analizar frame
     const analyzeThreat = async (isAuto = false) => {
-        if (!isOpen) return;
+        // Permitimos analizar en background si isAutoMonitoring es true
+        if (!isOpen && !isAuto) return;
+        if (isAnalyzing) return; // Evitar superposición de análisis
+        if (isEmergencyActive) return; // No analizar si ya hay una emergencia en pantalla
         
         const currentCam = cameras.find(c => c.id === selectedCamId);
         if (!currentCam) return;
 
-        if (!isAuto) setIsAnalyzing(true);
+        setIsAnalyzing(true);
         setStatusMsg(isAuto ? "Vigilando..." : "Capturando frame...");
 
         try {
@@ -187,7 +211,7 @@ export function SecurityPanel({ isOpen, onClose }: SecurityPanelProps) {
             if (!imageData) throw new Error("No se pudo capturar la imagen");
             setCapturedImage(imageData);
 
-            if (!isAuto) setStatusMsg("IA Gemini analizando...");
+            setStatusMsg(isAuto ? "IA analizando silenciosamente..." : "IA Gemini analizando...");
             
             // Llamada real a la API de Visión
             const aiResponse = await fetch("/api/analyze-vision", {
@@ -200,7 +224,7 @@ export function SecurityPanel({ isOpen, onClose }: SecurityPanelProps) {
             setAiResults(results);
 
             if (results.risk === "ALTO") {
-                triggerEmergencyAlert();
+                triggerEmergencyAlert(results.description, imageData);
                 setStatusMsg(`🚨 AMENAZA: ${results.description}`);
                 speak(`¡Atención! Peligro detectado. ${results.description}`);
             } else {
@@ -221,7 +245,7 @@ export function SecurityPanel({ isOpen, onClose }: SecurityPanelProps) {
             console.error("Error en análisis:", err);
             setStatusMsg("Error en IA Gemini");
         } finally {
-            if (!isAuto) setIsAnalyzing(false);
+            setIsAnalyzing(false);
         }
     };
 
@@ -237,13 +261,12 @@ export function SecurityPanel({ isOpen, onClose }: SecurityPanelProps) {
     };
 
     // Función para disparar la emergencia real
-    const triggerEmergencyAlert = async () => {
-        console.warn("🚨 IA DETECTÓ AMENAZA! DISPARANDO SIRENAS 🚨");
+    const triggerEmergencyAlert = async (desc: string = "Amenaza detectada", img: string | null = null) => {
+        console.warn("🚨 IA DETECTÓ AMENAZA! DISPARANDO SIRENAS GLOBALES 🚨");
         setStatusMsg("🚨 AMENAZA DETECTADA! 🚨");
         
-        // 1. Sirena Física
-        playSiren(45); 
-        setIsSirenPlaying(true);
+        // 1. Disparar estado global (sirena, overlay, pin)
+        triggerEmergency(desc, img, false);
 
         // 2. Registro en Supabase
         try {
@@ -266,18 +289,19 @@ export function SecurityPanel({ isOpen, onClose }: SecurityPanelProps) {
         console.log(`📱 Enviando alerta WhatsApp a ${emergencyPhone}: [ALERTA] Sujeto sospechoso detectado en Pasillo 1.`);
     };
 
-    // Efecto para monitoreo automático cada 15 segundos
+    // Efecto para monitoreo automático cada 8 segundos para evitar superposiciones
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (isAutoMonitoring && isOpen) {
+        if (isAutoMonitoring) {
             interval = setInterval(() => {
+                // Solo llamar si no está analizando ni hay emergencia, pero eso ya lo valida la función analyzeThreat
                 analyzeThreat(true);
-            }, 15000);
+            }, 8000);
         }
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [isAutoMonitoring, isOpen]);
+    }, [isAutoMonitoring, isOpen, isAnalyzing, isEmergencyActive]);
 
     // Función para iniciar la cámara USB local
     const startWebcam = async (forceId?: string) => {
@@ -405,103 +429,190 @@ export function SecurityPanel({ isOpen, onClose }: SecurityPanelProps) {
                 {/* Main Content */}
                 <div className="flex-1 overflow-y-auto flex flex-col lg:flex-row p-4 gap-4">
                     
-                    {/* Viewport Grid & Tabs */}
+                    {/* Viewport Grid & Tabs OR Config Panel */}
                     <div className="flex-1 flex flex-col gap-2">
-                        {/* Vista de Cámaras */}
-                        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin shrink-0">
-                            {cameras.map(cam => (
-                                <button
-                                    key={cam.id}
-                                    onClick={() => setSelectedCamId(cam.id)}
-                                    className={`px-4 py-2 rounded-xl text-xs font-black uppercase whitespace-nowrap transition-all border-2 ${selectedCamId === cam.id ? 'bg-orange-500 text-black border-orange-400' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
-                                >
-                                    {cam.name}
-                                </button>
-                            ))}
-                        </div>
-
-                        {cameras.filter(c => c.id === selectedCamId).map((cam) => (
-                            <div key={cam.id} className="relative bg-black rounded-2xl overflow-hidden group border border-slate-800 hover:border-orange-500/50 transition-all flex-1 min-h-[30vh] md:min-h-[50vh]">
-                                {/* Video Label */}
-                                <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
-                                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${cam.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`}>
-                                        {cam.status}
-                                    </span>
-                                    <span className="bg-black/60 backdrop-blur-md px-3 py-0.5 rounded-md text-[10px] font-bold text-white uppercase border border-white/10">
-                                        {cam.name}
-                                    </span>
+                        {isConfiguring ? (
+                            <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 flex-1 flex flex-col">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-xl font-black text-white uppercase tracking-wider">Configuración de Cámaras (NVR / IP)</h3>
+                                    <button 
+                                        onClick={() => {
+                                            localStorage.setItem('caserita_nvr_config', JSON.stringify(cameras));
+                                            setIsConfiguring(false);
+                                        }} 
+                                        className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl font-bold uppercase text-xs transition-colors"
+                                    >
+                                        Guardar y Cerrar
+                                    </button>
                                 </div>
-
-                                {/* Video Placeholder / Stream */}
-                                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-900 to-black">
-                                    {(cam.id === "1" || cam.id === "2") && !useProxy ? (
-                                        <div className="relative w-full h-full group/video flex items-center justify-center">
-                                            {/* Video Stream Local (PC Only) */}
-                                            <video 
-                                                ref={videoRef} 
-                                                autoPlay 
-                                                playsInline 
-                                                className={`w-full h-full object-contain shadow-[0_0_50px_rgba(0,0,0,0.8)] ${!stream ? 'hidden' : 'block'}`}
-                                            />
-
-                                            {/* Controls Overlay Local */}
-                                            <div className={`absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 bg-slate-900/90 backdrop-blur-md transition-opacity ${stream ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}>
-                                                {!stream && (
-                                                    <div className="flex flex-col items-center mb-4">
-                                                        <div className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center shadow-inner relative overflow-hidden border border-slate-700">
-                                                            <Camera className="w-10 h-10 text-slate-500 relative z-10" />
-                                                            <div className="absolute inset-0 bg-orange-500/10 animate-pulse rounded-full"></div>
-                                                        </div>
-                                                        <p className="text-white font-black tracking-widest text-sm mt-4 text-center">CENTRO DE MONITOREO LOCAL</p>
-                                                    </div>
-                                                )}
-                                                
-                                                {devices.length > 0 && (
-                                                    <div className="w-full max-w-[300px] flex flex-col gap-1">
-                                                        <select 
-                                                            value={selectedDeviceId}
-                                                            onChange={(e) => {
-                                                                const newId = e.target.value;
-                                                                setSelectedDeviceId(newId);
-                                                                startWebcam(newId);
-                                                            }}
-                                                            className="bg-black/60 text-white text-[11px] font-bold py-3 px-4 rounded-xl border border-white/20 w-full"
-                                                        >
-                                                            {devices.map(d => (
-                                                                <option key={d.deviceId} value={d.deviceId}>{d.label || `Cámara ${d.deviceId.slice(0,5)}`}</option>
-                                                            ))}
-                                                        </select>
-                                                    </div>
-                                                )}
-
-                                                <button 
-                                                    onClick={() => startWebcam()}
-                                                    className="w-full max-w-[300px] bg-orange-500 text-black py-3 rounded-xl font-black uppercase text-sm hover:bg-orange-400"
-                                                >
-                                                    {stream ? "REINTENTAR CONEXIÓN" : "INICIAR VIGILANCIA LOCAL"}
-                                                </button>
+                                <p className="text-slate-400 text-sm mb-6">Configura las IPs locales de tu NVR (Hikvision, Dahua) o cámaras Tapo. Usa URLs HTTP (MJPEG) o el proxy del NVR.</p>
+                                
+                                <div className="space-y-4 overflow-y-auto pr-2">
+                                    {cameras.map((cam, idx) => (
+                                        <div key={cam.id} className="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col md:flex-row gap-4 items-end">
+                                            <div className="flex-1 w-full">
+                                                <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Nombre de Cámara</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={cam.name}
+                                                    onChange={(e) => {
+                                                        const newCams = [...cameras];
+                                                        newCams[idx].name = e.target.value;
+                                                        setCameras(newCams);
+                                                    }}
+                                                    className="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm mt-1 focus:border-orange-500 outline-none"
+                                                />
                                             </div>
-                                        </div>
-                                    ) : (
-                                        <div className="relative w-full h-full group/video flex items-center justify-center">
-                                            {/* Stream Remoto usando proxy de frames (Mobile & Temu) */}
-                                            <img 
-                                                src={`/api/cam?src=${cam.url}&t=${remoteRefreshKey}`} 
-                                                alt={`Cámara ${cam.name}`} 
-                                                className="w-full h-full object-contain"
-                                                onError={(e) => { 
-                                                    setStatusMsg(`${cam.name} fuera de línea`); 
+                                            <div className="flex-[2] w-full">
+                                                <label className="text-[10px] font-black uppercase text-slate-500 ml-1">URL (RTSP/HTTP/IP Local)</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={cam.url}
+                                                    onChange={(e) => {
+                                                        const newCams = [...cameras];
+                                                        newCams[idx].url = e.target.value;
+                                                        setCameras(newCams);
+                                                    }}
+                                                    placeholder="ej. http://192.168.1.100:8080/video"
+                                                    className="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm mt-1 focus:border-orange-500 outline-none"
+                                                />
+                                            </div>
+                                            <div className="w-full md:w-auto">
+                                                <label className="text-[10px] font-black uppercase text-slate-500 ml-1">Tipo</label>
+                                                <select 
+                                                    value={cam.type}
+                                                    onChange={(e) => {
+                                                        const newCams = [...cameras];
+                                                        newCams[idx].type = e.target.value as any;
+                                                        setCameras(newCams);
+                                                    }}
+                                                    className="w-full bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm mt-1 focus:border-orange-500 outline-none"
+                                                >
+                                                    <option value="Domo">Domo</option>
+                                                    <option value="Bala">Bala</option>
+                                                    <option value="Webcam">Webcam USB</option>
+                                                </select>
+                                            </div>
+                                            <button 
+                                                onClick={() => {
+                                                    setCameras(cameras.filter((_, i) => i !== idx));
                                                 }}
-                                                onLoad={() => {
-                                                    setStatusMsg(`Conectado a ${cam.name}`);
-                                                    setCameras(prev => prev.map(c => c.id === cam.id ? { ...c, status: "online" } : c));
-                                                }}
-                                            />
+                                                className="bg-red-500/10 hover:bg-red-500/20 text-red-500 p-2.5 rounded-lg border border-red-500/30 transition-colors"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
                                         </div>
-                                    )}
+                                    ))}
                                 </div>
+                                <button 
+                                    onClick={() => {
+                                        setCameras([...cameras, { id: Date.now().toString(), name: "Nueva Cámara", url: "", type: "Bala", status: "offline" }]);
+                                    }}
+                                    className="mt-6 border-2 border-dashed border-slate-600 text-slate-400 hover:text-white hover:border-slate-500 py-4 rounded-xl font-bold uppercase text-xs transition-all w-full flex items-center justify-center gap-2"
+                                >
+                                    <span>+ Añadir Cámara IP / NVR</span>
+                                </button>
                             </div>
-                        ))}
+                        ) : (
+                            <>
+                                {/* Vista de Cámaras */}
+                                <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin shrink-0">
+                                    {cameras.map(cam => (
+                                        <button
+                                            key={cam.id}
+                                            onClick={() => setSelectedCamId(cam.id)}
+                                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase whitespace-nowrap transition-all border-2 ${selectedCamId === cam.id ? 'bg-orange-500 text-black border-orange-400' : 'bg-slate-800 text-slate-400 border-slate-700 hover:border-slate-500'}`}
+                                        >
+                                            {cam.name}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {cameras.filter(c => c.id === selectedCamId).map((cam) => (
+                                    <div key={cam.id} className="relative bg-black rounded-2xl overflow-hidden group border border-slate-800 hover:border-orange-500/50 transition-all flex-1 min-h-[30vh] md:min-h-[50vh]">
+                                        {/* Video Label */}
+                                        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+                                            <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase ${cam.status === 'online' ? 'bg-green-500' : 'bg-red-500'}`}>
+                                                {cam.status}
+                                            </span>
+                                            <span className="bg-black/60 backdrop-blur-md px-3 py-0.5 rounded-md text-[10px] font-bold text-white uppercase border border-white/10">
+                                                {cam.name}
+                                            </span>
+                                        </div>
+
+                                        {/* Video Placeholder / Stream */}
+                                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-slate-900 to-black">
+                                            {(cam.type === "Webcam" || cam.id === "1" || cam.id === "2") && !useProxy && !cam.url.startsWith("http") ? (
+                                                <div className="relative w-full h-full group/video flex items-center justify-center">
+                                                    {/* Video Stream Local (PC Only) */}
+                                                    <video 
+                                                        ref={videoRef} 
+                                                        autoPlay 
+                                                        playsInline 
+                                                        className={`w-full h-full object-contain shadow-[0_0_50px_rgba(0,0,0,0.8)] ${!stream ? 'hidden' : 'block'}`}
+                                                    />
+
+                                                    {/* Controls Overlay Local */}
+                                                    <div className={`absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 bg-slate-900/90 backdrop-blur-md transition-opacity ${stream ? 'opacity-0 hover:opacity-100' : 'opacity-100'}`}>
+                                                        {!stream && (
+                                                            <div className="flex flex-col items-center mb-4">
+                                                                <div className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center shadow-inner relative overflow-hidden border border-slate-700">
+                                                                    <Camera className="w-10 h-10 text-slate-500 relative z-10" />
+                                                                    <div className="absolute inset-0 bg-orange-500/10 animate-pulse rounded-full"></div>
+                                                                </div>
+                                                                <p className="text-white font-black tracking-widest text-sm mt-4 text-center">CENTRO DE MONITOREO LOCAL</p>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {devices.length > 0 && (
+                                                            <div className="w-full max-w-[300px] flex flex-col gap-1">
+                                                                <select 
+                                                                    value={selectedDeviceId}
+                                                                    onChange={(e) => {
+                                                                        const newId = e.target.value;
+                                                                        setSelectedDeviceId(newId);
+                                                                        startWebcam(newId);
+                                                                    }}
+                                                                    className="bg-black/60 text-white text-[11px] font-bold py-3 px-4 rounded-xl border border-white/20 w-full"
+                                                                >
+                                                                    {devices.map(d => (
+                                                                        <option key={d.deviceId} value={d.deviceId}>{d.label || `Cámara ${d.deviceId.slice(0,5)}`}</option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        )}
+
+                                                        <button 
+                                                            onClick={() => startWebcam()}
+                                                            className="w-full max-w-[300px] bg-orange-500 text-black py-3 rounded-xl font-black uppercase text-sm hover:bg-orange-400"
+                                                        >
+                                                            {stream ? "REINTENTAR CONEXIÓN" : "INICIAR VIGILANCIA LOCAL"}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="relative w-full h-full group/video flex items-center justify-center">
+                                                    {/* Stream IP o Remoto */}
+                                                    <img 
+                                                        src={cam.url.startsWith("http") ? cam.url : `/api/cam?src=${cam.url}&t=${remoteRefreshKey}`} 
+                                                        alt={`Cámara ${cam.name}`} 
+                                                        className="w-full h-full object-contain"
+                                                        onError={(e) => { 
+                                                            setStatusMsg(`${cam.name} fuera de línea`); 
+                                                            setCameras(prev => prev.map(c => c.id === cam.id ? { ...c, status: "offline" } : c));
+                                                        }}
+                                                        onLoad={() => {
+                                                            setStatusMsg(`Conectado a ${cam.name}`);
+                                                            setCameras(prev => prev.map(c => c.id === cam.id ? { ...c, status: "online" } : c));
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </>
+                        )}
                     </div>
 
                         {/* IA Analytics Panel */}
@@ -596,7 +707,7 @@ export function SecurityPanel({ isOpen, onClose }: SecurityPanelProps) {
                                         <h3 className="text-sm font-black uppercase text-slate-400">Vigilancia Inteligente</h3>
                                         <p className="text-[10px] text-slate-500 mt-2 max-w-[200px]">
                                             {isAutoMonitoring 
-                                                ? "El sistema está analizando el video automáticamente cada 15 seg." 
+                                                ? "El sistema está analizando el video automáticamente cada 3 seg." 
                                                 : "Activa el modo centinela para monitoreo autónomo."}
                                         </p>
                                         
@@ -625,7 +736,7 @@ export function SecurityPanel({ isOpen, onClose }: SecurityPanelProps) {
                                                         description: "SIMULACIÓN DE PRUEBA: Sujeto detectado con actitud sospechosa."
                                                     };
                                                     setAiResults(mockResults);
-                                                    triggerEmergencyAlert();
+                                                    triggerEmergencyAlert(mockResults.description, null);
                                                     speak("¡Atención! Iniciando prueba de seguridad. Sirenas activadas.");
                                                 }}
                                                 className="mt-2 bg-slate-800 text-slate-400 py-2 rounded-xl font-bold uppercase text-[9px] border border-dashed border-slate-600 hover:bg-slate-700 hover:text-white transition-all"

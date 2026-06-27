@@ -21,6 +21,9 @@ Este documento detalla la estructura de los tutoriales y los prompts necesarios 
 | **El Cuaderno Digital (Fiados)** | Cómo registrar clientes, ver quién te debe y anotar pagos parciales. | 50s | Gestión de Deuda |
 | **Control de Stock Maestro** | Cómo cambiar precios y ver qué falta en tu inventario sin esfuerzo. | 45s | Inventario |
 | **Modo Pánico y Seguridad** | Cómo activar alertas silenciosas si te sientes en peligro. | 40s | Protección |
+| **Generación de Ticket PDF** | Cómo imprimir Boletas/Facturas tamaño A6 con un solo botón tras una venta. | 45s | Facturación Electrónica |
+| **Hablando con tu Proveedor** | Cómo registrar un gasto y pedir mercancía por WhatsApp usando mensajes rápidos. | 50s | Gastos y Proveedores |
+| **Magia: Carga Masiva** | Cómo pegar cientos de productos desde Excel a la app en 3 segundos. | 40s | Maestro de Productos |
 
 ---
 
@@ -49,6 +52,15 @@ Para generar estos videos, usa estos prompts estructurados de la siguiente maner
 
 ### Prompt D: Lo que NO se debe hacer (Humor/Alerta)
 > **Prompt**: "Instructional style animation. A red 'X' appearing over a blurry photo of a bank QR code. Then a green checkmark appearing over a perfectly centered, clear QR code in a digital frame. Educational aesthetic, simple and clear."
+
+### Prompt E: Tutorial de Facturación (Ticket A6)
+> **Prompt**: "A digital POS tablet screen displaying 'Caserita Smart'. A hand taps a glowing green 'Finalizar Venta' button. A clean, professional A6 sized PDF receipt pops up on screen with 'Boleta Electrónica' and a green checkmark indicating SUNAT validation. Professional software presentation, 4k."
+
+### Prompt F: Carga Masiva (Excel)
+> **Prompt**: "Split screen: left side shows a complex Excel spreadsheet with grocery inventory. Right side shows the 'Caserita Smart' Master Product interface. An arrow sweeps from left to right, and instantly hundreds of colorful product cards populate the screen. Dynamic data transfer visual effect, upbeat tech style."
+
+### Prompt G: Chat Inteligente con Proveedor
+> **Prompt**: "Close-up of a smartphone screen showing the 'Caserita Smart' Provider interface. A finger taps a button labeled '📅 Fecha de Entrega'. The screen smoothly transitions to a WhatsApp chat interface where the message is automatically typed out to the supplier. Fluid UI animation, clean design."
 
 ---
 

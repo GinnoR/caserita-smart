@@ -1,9 +1,56 @@
 import { useEffect, useRef, useState } from 'react';
 import { playSiren, stopSirenInternal } from '@/lib/siren-utils';
+import { useEmergencyStore } from '@/lib/emergency-store';
+import { supabaseService } from '@/lib/supabase-service';
 
 export function usePanicMode(panicWord: string = 'auxilio') {
     const recognitionRef = useRef<any>(null);
     const [isSirenActive, setIsSirenActive] = useState(false);
+    const { triggerEmergency, dismissEmergency } = useEmergencyStore();
+    const pendingConfirmationRef = useRef(false);
+    const confirmationTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Definimos triggerPanicAction fuera del useEffect pero usamos dependencias con useRef
+    const triggerPanicAction = async (image: string | null = null) => {
+        console.warn("🚨 PANIC MODE TRIGGERED! 🚨");
+
+        const isSilent = typeof window !== 'undefined' ? (localStorage.getItem('caserita_silent_panic_default') === 'true') : false;
+        
+        // Activa el overlay global (Sirena es manejada por el GlobalEmergencyOverlay)
+        triggerEmergency('Peligro inminente detectado (Botón / Voz)', image, isSilent);
+        setIsSirenActive(true);
+
+        // Remote Log
+        try {
+            const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+            if (!url || url === 'https://placeholder.supabase.co') return;
+
+            const { supabase } = await import('@/utils/supabase/client');
+            const { data: { session } } = await supabase.auth.getSession();
+            const userId = session?.user?.id;
+
+            if (userId) {
+                // Obtener GPS
+                let lat: number | undefined;
+                let lon: number | undefined;
+                if (typeof navigator !== 'undefined' && navigator.geolocation) {
+                    try {
+                        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+                            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+                        });
+                        lat = pos.coords.latitude;
+                        lon = pos.coords.longitude;
+                    } catch (err) {
+                        console.warn("No se pudo obtener GPS", err);
+                    }
+                }
+
+                await supabaseService.recordPanicIncident(userId, 'PANICO', 'Activado por Voz / Botón', isSilent, lat, lon);
+            }
+        } catch (e) {
+            console.error("Exception trying to log Panic Action", e);
+        }
+    };
 
     useEffect(() => {
         if (typeof window !== 'undefined' && 'webkitSpeechRecognition' in window) {
@@ -25,7 +72,26 @@ export function usePanicMode(panicWord: string = 'auxilio') {
                 const matchedTrigger = triggerPhrases.some(phrase => transcript.includes(phrase));
 
                 if (matchedTrigger || transcript.includes(panicWord.toLowerCase())) {
-                    triggerPanicAction();
+                    const hasCameras = typeof window !== 'undefined' ? (localStorage.getItem('caserita_has_cameras') === 'true') : false;
+                    
+                    if (hasCameras) {
+                        triggerPanicAction('/tottus_error.png'); // Simula imagen de cámara
+                    } else {
+                        if (!pendingConfirmationRef.current) {
+                            pendingConfirmationRef.current = true;
+                            console.log("⚠️ Primer aviso de pánico detectado. Esperando confirmación (repite la palabra)...");
+                            
+                            if (confirmationTimerRef.current) clearTimeout(confirmationTimerRef.current);
+                            confirmationTimerRef.current = setTimeout(() => {
+                                pendingConfirmationRef.current = false;
+                                console.log("⏱️ Tiempo de confirmación expirado.");
+                            }, 10000);
+                        } else {
+                            if (confirmationTimerRef.current) clearTimeout(confirmationTimerRef.current);
+                            pendingConfirmationRef.current = false;
+                            triggerPanicAction();
+                        }
+                    }
                 }
 
                 // 2. Detección de Cancelación SEGURA (Palabra Secreta)
@@ -35,32 +101,16 @@ export function usePanicMode(panicWord: string = 'auxilio') {
                 const matchedSecret = secretPhrases.some(phrase => transcript.includes(phrase));
 
                 if (matchedSecret) {
-                    console.log("🤫 Frase secreta detectada. Deteniendo sirena...");
+                    console.log("🤫 Frase secreta detectada. Deteniendo emergencia...");
                     stopSiren();
                 }
-
-                // Nota: Se han eliminado los comandos genéricos "detener" o "parar" por seguridad.
             };
 
-            recognitionRef.current.onend = () => {
-                // AUTO-RESTART: Comentado para evitar el pitido constante por falsos positivos
-                /*
-                try {
-                    recognitionRef.current.start();
-                } catch (e) {
-                    // Si ya está iniciado, ignorar
-                }
-                */
-            };
+            recognitionRef.current.onend = () => {};
 
             recognitionRef.current.onerror = (event: any) => {
-                // Ignoramos errores comunes que ensucian la consola
                 if (event.error === 'no-speech') return;
-
                 console.warn("🎤 Panic Mic warning:", event.error);
-
-                // RESTART SEGURO: Solo reiniciamos en caso de error de red transitorio
-                // No reiniciamos en 'audio-capture' porque significa que otra pestaña o el mic normal (useVoiceInput) lo están usando
                 if (event.error === 'network') {
                     console.log("🎤 Panic Mic: Reintentando en 5s por error de red...");
                     setTimeout(() => {
@@ -80,64 +130,16 @@ export function usePanicMode(panicWord: string = 'auxilio') {
             if (recognitionRef.current) recognitionRef.current.stop();
             stopSiren();
         }
-    }, [panicWord]);
-
-    const triggerPanicAction = async () => {
-        console.warn("🚨 PANIC MODE TRIGGERED! 🚨");
-
-        // 1. Omitimos el alert() bloqueante nativo que detendría la aplicación
-
-        // 2. Play Siren (Using shared utility)
-        const started = await playSiren(30);
-        if (started) {
-            setIsSirenActive(true);
-        }
-
-        // Safety Auto-stop after 30 seconds
-        setTimeout(() => {
-            stopSiren();
-        }, 30000);
-
-        // 3. Remote Log (Silent) en Supabase -> Tabla de Alertas
-        try {
-            // Validar conexion a Supabase
-            const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-            if (!url || url === 'https://placeholder.supabase.co') {
-                console.log("🆘 Alerta Simulada Pánico (Desconectado) Mode:", localStorage.getItem('caserita_emergency_1'));
-                return;
-            }
-
-            const { supabase } = await import('@/utils/supabase/client');
-
-            // Obtener el ID del Usuario Autenticado actual
-            const { data: { session } } = await supabase.auth.getSession();
-            const userId = session?.user?.id;
-
-            if (userId) {
-                const { error } = await supabase.from('alertas_seguridad').insert({
-                    cod_casero: userId,
-                    tipo_alerta: 'PANICO',
-                    origen: 'BotonUI', // Puede ser 'Voz' dependiendo de cómo se invocó
-                    resuelto: false
-                });
-
-                if (error) {
-                    console.error("Failed to log panic incident remotely", error.message);
-                } else {
-                    console.log("🆘 Alerta SOS enviada silenciosamente a Supabase.");
-                }
-            } else {
-                console.log("🆘 Alerta no enviada (Usuario Test/Offline)");
-            }
-        } catch (e) {
-            console.error("Exception trying to log Panic Action", e);
-        }
-    };
+    }, [panicWord, triggerEmergency]);
 
     const stopSiren = () => {
+        dismissEmergency();
         stopSirenInternal();
         setIsSirenActive(false);
     }
 
-    return { stopSiren, triggerPanicAction, isSirenActive };
+    // Para el botón manual, forzamos la acción directamente sin confirmación
+    const manualTrigger = () => triggerPanicAction();
+
+    return { stopSiren, triggerPanicAction: manualTrigger, isSirenActive };
 }

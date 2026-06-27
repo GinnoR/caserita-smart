@@ -41,7 +41,7 @@ const productsData = [
     { cod: 'AB-115', 'name': 'Pan de Molde Bimbo Blanco Grande', cat: 'Panadería', brand: 'Bimbo', price: 10.50, stock: 10 },
     { cod: 'LIM-104', 'name': 'Papel Higiénico Elite (Paquete x4)', cat: 'Limpieza', brand: 'Elite', price: 7.50, stock: 20 },
     { cod: 'AB-116', 'name': 'Sal Marina Emsal 1kg', cat: 'Condimentos', brand: 'Emsal', price: 1.80, stock: 50 },
-    { cod: 'AB-117', 'name': 'Filete de Atún Campomar', cat: 'Abarrotes', brand: 'Campomar', price: 6.20, stock: 48 },
+    { cod: 'AB-117', 'name': 'Filete de Atún Campomar 170g', cat: 'Abarrotes', brand: 'Campomar', price: 6.20, stock: 48 },
     { cod: 'AB-118', 'name': 'Ajinomoto 100g', cat: 'Condimentos', brand: 'Ajinomoto', price: 2.50, stock: 100 },
     { cod: 'AB-119', 'name': 'Mayonesa Alacena 400g (Doypack)', cat: 'Condimentos', brand: 'Alacena', price: 8.90, stock: 15 },
     { cod: 'BEB-104', 'name': 'Yogurt Griego Tigo Natural', cat: 'Lácteos', brand: 'Tigo', price: 14.50, stock: 8 },
