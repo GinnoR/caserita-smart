@@ -121,20 +121,33 @@ export const supabaseService = {
                 if (error) {
                     throw error;
                 }
-                finalInventory = (data || []).map(item => ({
-                    id: item.id,
-                    cod_bar_produc: item.cod_bar_produc,
-                    nombre_producto: item.nombre_producto,
-                    marca_producto: item.marca_producto,
-                    categoria: item.categoria,
-                    ubicacion: item.ubicacion,
-                    um: item.um ?? 'und',
-                    unidades_base: item.unidades_base ?? 1,
-                    fecha_caducidad: item.fecha_caducidad ?? null,
-                    cantidad_ingreso: item.stock_actual ?? 50,
-                    p_u_venta: item.precio_unitario ?? 1.50,
-                    p_u_compra: item.precio_compra ?? 1.00,
-                }));
+                finalInventory = (data || []).map(item => {
+                    let p_u_venta = 1.50;
+                    const name = (item.nombre_producto || '').toLowerCase();
+                    if (name.includes('arroz') || name.includes('azucar') || name.includes('fideo')) p_u_venta = 4.50;
+                    else if (name.includes('aceite')) p_u_venta = 8.50;
+                    else if (name.includes('leche')) p_u_venta = 4.20;
+                    else if (name.includes('atun') || name.includes('atún')) p_u_venta = 5.50;
+                    else if (name.includes('huevo')) p_u_venta = 7.50;
+                    else if (name.includes('jabon') || name.includes('jabón')) p_u_venta = 2.50;
+                    else if (name.includes('gaseosa') || name.includes('inka') || name.includes('coca')) p_u_venta = 3.50;
+                    else p_u_venta = 3.00;
+
+                    return {
+                        id: item.id,
+                        cod_bar_produc: item.cod_bar_produc,
+                        nombre_producto: item.nombre_producto,
+                        marca_producto: item.marca_producto,
+                        categoria: item.categoria,
+                        ubicacion: item.ubicacion,
+                        um: item.um ?? 'und',
+                        unidades_base: item.unidades_base ?? 1,
+                        fecha_caducidad: item.fecha_caducidad ?? null,
+                        cantidad_ingreso: item.stock_actual ?? 50,
+                        p_u_venta: p_u_venta,
+                        p_u_compra: p_u_venta - 1.00,
+                    };
+                });
             }
 
             // Guardar en cache local si tuvo éxito
