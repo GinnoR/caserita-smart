@@ -29,7 +29,7 @@ import { CartItem, Sale, createSale, computeDailySummary, DailySummary } from "@
 import { supabaseService } from "@/lib/supabase-service";
 import { formatStock } from "@/lib/format-utils";
 import { localParse, findBestProductMatch as findBestProductMatchUnified, getTopProductMatches } from "@/utils/matching";
-import { offlineService, SyncItem } from "@/lib/offline-service";
+import { offlineService } from "@/lib/offline-service";
 import { generateTicketPDF } from "@/lib/pdf-generator";
 import dynamic from "next/dynamic";
 const OnboardingGuide = dynamic(() => import("@/components/OnboardingGuide"), { ssr: false });

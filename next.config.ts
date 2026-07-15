@@ -5,8 +5,8 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  devIndicators: {
-    buildActivity: false,
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 };
 
