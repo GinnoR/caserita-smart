@@ -131,9 +131,9 @@ export const supabaseService = {
                     um: item.um ?? 'und',
                     unidades_base: item.unidades_base ?? 1,
                     fecha_caducidad: item.fecha_caducidad ?? null,
-                    cantidad_ingreso: 50,
-                    p_u_venta: 1.50,
-                    p_u_compra: 1.00,
+                    cantidad_ingreso: item.stock_actual ?? 50,
+                    p_u_venta: item.precio_unitario ?? 1.50,
+                    p_u_compra: item.precio_compra ?? 1.00,
                 }));
             }
 
