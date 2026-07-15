@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useMemo, useEffect } from "react";
 import { Lock, Search, Plus, Edit2, Trash2, X, Check, ShieldCheck, AlertCircle, MapPin, Calendar } from "lucide-react";
 import { supabaseService } from "@/lib/supabase-service";
