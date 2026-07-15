@@ -7,7 +7,7 @@ import { OrderPanel } from "@/components/OrderPanel";
 import { InventoryPanel } from "@/components/InventoryPanel";
 import { ActionPanel } from "@/components/ActionPanel";
 import { PaymentMethods } from "@/components/PaymentMethods";
-import { ShieldAlert, Store, Camera, X, Smartphone, Search, FileText, Share2, UserCheck, Settings, QrCode, Database, MoreHorizontal, PieChart, MessageCircle, BarChart, Eye, Sparkles } from "lucide-react";
+import { ShieldAlert, Store, Camera, X, Smartphone, Search, FileText, Share2, UserCheck, Settings, QrCode, Database, MoreHorizontal, PieChart, MessageCircle, BarChart, Eye, Sparkles, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Footer } from "@/components/Footer";
 import { FiadosModal } from "@/components/FiadosModal";
@@ -77,6 +77,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     const [showFiados, setShowFiados] = useState(false);
     const [showQR, setShowQR] = useState(false);
     const [showConfig, setShowConfig] = useState(false);
+    const [configTab, setConfigTab] = useState<"seguridad" | "comunicaciones" | "camaras" | "tips" | "asistentes" | "tributacion">("seguridad");
     const [showBuyers, setShowBuyers] = useState(false);
     const [showReceiptModal, setShowReceiptModal] = useState(false);
     const [receiptType, setReceiptType] = useState<'whatsapp' | 'boleta' | 'factura'>('whatsapp');
@@ -1685,7 +1686,11 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                             <span className="text-[10px] font-black uppercase tracking-wider">Cámaras</span>
                         </button>
                         <div className="flex-1"></div>
-                        <button onClick={() => setShowConfig(true)} className="flex flex-col items-center gap-2 transition-all hover:text-white">
+                        <button onClick={() => { setConfigTab('tributacion'); setShowConfig(true); }} className="flex flex-col items-center gap-2 transition-all hover:text-white mb-4 text-slate-400 hover:text-emerald-400">
+                            <Calculator className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider text-center leading-none">Tributos</span>
+                        </button>
+                        <button onClick={() => { setConfigTab('seguridad'); setShowConfig(true); }} className="flex flex-col items-center gap-2 transition-all hover:text-white text-slate-400">
                             <Settings className="w-8 h-8" />
                             <span className="text-[10px] font-black uppercase tracking-wider">Ajustes</span>
                         </button>

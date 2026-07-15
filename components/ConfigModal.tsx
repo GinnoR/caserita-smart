@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { X, ShieldAlert, Phone, Volume2, Camera, Info, Save, Users } from "lucide-react";
+import { X, ShieldAlert, Phone, Volume2, Camera, Info, Save, Users, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AsistentesPanel } from "@/components/AsistentesPanel";
+import ConfiguracionTributaria from "@/components/ConfiguracionTributaria";
 import { playSiren, stopSirenInternal } from "@/lib/siren-utils";
 
 interface ConfigModalProps {
@@ -12,12 +13,13 @@ interface ConfigModalProps {
     userId?: string;
     cajeroNombre?: string;
     isOwner?: boolean;
+    initialTab?: TabType;
 }
 
-type TabType = "seguridad" | "comunicaciones" | "camaras" | "tips" | "asistentes";
+type TabType = "seguridad" | "comunicaciones" | "camaras" | "tips" | "asistentes" | "tributacion";
 
-export function ConfigModal({ isOpen, onClose, userId, cajeroNombre = 'Dueño/a', isOwner = true }: ConfigModalProps) {
-    const [activeTab, setActiveTab] = useState<TabType>("seguridad");
+export function ConfigModal({ isOpen, onClose, userId, cajeroNombre = 'Dueño/a', isOwner = true, initialTab = "seguridad" }: ConfigModalProps) {
+    const [activeTab, setActiveTab] = useState<TabType>(initialTab);
     const [isSaving, setIsSaving] = useState(false);
     const [showMenuOnMobile, setShowMenuOnMobile] = useState(true); // Control para móviles
 
@@ -108,6 +110,13 @@ export function ConfigModal({ isOpen, onClose, userId, cajeroNombre = 'Dueño/a'
                             label="Asistentes"
                             color="text-blue-600"
                         />
+                        <TabButton
+                            active={activeTab === "tributacion"}
+                            onClick={() => handleSelectTab("tributacion")}
+                            icon={Calculator}
+                            label="Tributación"
+                            color="text-emerald-600"
+                        />
                         
                         <div className="mt-auto p-4 bg-blue-100/50 rounded-2xl border border-blue-200">
                             <p className="text-[10px] text-blue-800 font-bold text-center">MODO PRO ACTIVADO</p>
@@ -130,7 +139,7 @@ export function ConfigModal({ isOpen, onClose, userId, cajeroNombre = 'Dueño/a'
                         )}
 
                         <div className="md:hidden mb-4 flex items-center justify-between border-b pb-2">
-                             <h3 className="font-black text-slate-900 uppercase text-xs">{activeTab.replace("camaras", "Cámaras").replace("seguridad", "Alertas")}</h3>
+                             <h3 className="font-black text-slate-900 uppercase text-xs">{activeTab.replace("camaras", "Cámaras").replace("seguridad", "Alertas").replace("tributacion", "Tributación")}</h3>
                              <button onClick={() => setShowMenuOnMobile(true)} className="text-blue-600 text-[10px] font-bold">CAMBIAR SECCIÓN</button>
                         </div>
 
@@ -138,6 +147,7 @@ export function ConfigModal({ isOpen, onClose, userId, cajeroNombre = 'Dueño/a'
                         {activeTab === "comunicaciones" && <CommSettings isOwner={isOwner} />}
                         {activeTab === "camaras" && <CameraSettings isOwner={isOwner} />}
                         {activeTab === "tips" && <TipsSettings />}
+                        {activeTab === "tributacion" && userId && <ConfiguracionTributaria userId={userId} />}
                         {activeTab === "asistentes" && userId && (
                             <AsistentesPanel userId={userId} isOwner={isOwner} />
                         )}
