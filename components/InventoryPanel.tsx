@@ -56,8 +56,8 @@ export function InventoryPanel({
 
     return (
         <div className={cn(
-            "flex flex-col bg-slate-50/50 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border-2 border-white/50 transition-all duration-500",
-            isCollapsed ? 'max-h-[60px]' : 'h-full'
+            "flex flex-col min-h-0 bg-slate-50/50 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border-2 border-white/50 transition-all duration-500",
+            isCollapsed ? 'max-h-[60px]' : 'flex-1'
         )}>
             {/* Header with Premium Gradient */}
             <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 px-5 py-4 flex flex-col gap-3 relative">
@@ -111,10 +111,9 @@ export function InventoryPanel({
                 )}
             </div>
 
-            <div className={cn("flex-1 flex flex-col min-h-0 overflow-hidden", isCollapsed ? "hidden" : "block")}>
-                {/* Desktop Legend (Removed, using Cards now) */}
-
-                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 scroll-smooth bg-slate-50">
+            <div className={cn("flex-1 overflow-hidden", isCollapsed ? "hidden" : "block")}>
+                <div ref={scrollRef} className="h-full overflow-y-auto p-4 scroll-smooth bg-slate-50">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                     {(inventory || [])
                         .filter(item => {
                             if (!activeSearch) return true;
@@ -277,8 +276,9 @@ export function InventoryPanel({
                                 </div>
                             );
                         })}
+                        </div>
+                    </div>
                 </div>
-            </div>
 
             {/* MODAL VISTA PREVIA CATÁLOGO */}
             {showPreview && (

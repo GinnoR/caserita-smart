@@ -35,8 +35,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <body className={cn(inter.className, "bg-slate-900 text-white min-h-screen relative")}>
+    <html lang="es" className="overflow-hidden">
+      <body className={cn(inter.className, "bg-slate-900 text-white h-screen overflow-hidden relative flex flex-col")}>
         <PWARegister />
         <InstallPWA />
         <ClientLayoutCleaner />
@@ -44,7 +44,7 @@ export default function RootLayout({
         <div className="fixed top-0 left-0 right-0 z-[9999] bg-emerald-600 text-white text-[12px] font-black text-center py-2 border-b-2 border-emerald-400 pointer-events-none animate-pulse">
            🟢 SISTEMA v4.0 - CONFIG-VOZ ACTIVA (ACTUALIZADO - MODO PROD)
         </div>
-        <div className="pt-8">
+        <div className="pt-8 flex-1 flex flex-col min-h-0">
           {children}
         </div>
       </body>

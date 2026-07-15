@@ -1580,7 +1580,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     }
 
     return (
-        <main style={isMobile ? { height: '100dvh', overflow: 'auto', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-col h-screen overflow-hidden bg-slate-200'}>
+        <main style={isMobile ? { height: '100dvh', overflow: 'auto', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-1 flex-col h-full overflow-hidden bg-slate-200 min-h-0'}>
             <Header onLogout={onLogout} aiMode={aiMode} onModeChange={handleModeChange} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} onOpenFAQ={() => setShowFAQ(true)} />
 
             {/* ONBOARDING GUIDE — only for new users */}
@@ -1665,7 +1665,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
             {/* ===== DESKTOP LAYOUT ===== */}
             {!isMobile && (
-                <div className="flex flex-1 overflow-hidden">
+                <div className="flex flex-1 overflow-hidden min-h-0">
                     {/* FIXED SIDEBAR DESKTOP */}
                     <div className="w-24 bg-slate-900 text-slate-400 flex flex-col items-center py-6 gap-8 shadow-xl z-20 shrink-0">
                         <button onClick={() => setActiveTab('pedidos')} className={`flex flex-col items-center gap-2 transition-all hover:text-white ${activeTab === 'pedidos' ? 'text-emerald-400 scale-110' : ''}`}>
@@ -1692,11 +1692,11 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     </div>
 
                     {/* MAIN CONTENT AREA */}
-                    <div className="flex-1 bg-slate-100 overflow-hidden flex flex-col p-4 relative">
+                    <div className="flex-1 bg-slate-100 overflow-hidden flex flex-col p-4 relative min-h-0">
                         {activeTab === 'pedidos' && (
-                            <div className="flex flex-1 gap-4 overflow-hidden">
+                            <div className="flex flex-1 gap-4 overflow-hidden min-h-0">
                                 {/* Zona Izquierda: Buscador e Inventario visual */}
-                                <div className="flex-[3] flex flex-col overflow-hidden bg-white rounded-3xl shadow-sm border border-slate-200">
+                                <div className="flex-[3] flex flex-col min-h-0 overflow-hidden bg-white rounded-3xl shadow-sm border border-slate-200">
                                      <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
                                 </div>
                                 

@@ -2,9 +2,18 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Store, CheckCircle, ArrowRight, ShieldCheck } from "lucide-react";
+import { Store, CheckCircle, ArrowRight, ShieldCheck, Play, X, Users } from "lucide-react";
+import { OllamaTutorialAgent } from "./OllamaTutorialAgent";
+
+const VIDEOS_DEMO = [
+    { id: "ventas-voz", title: "Ventas sin teclear", desc: "Registra ventas usando solo tu voz con IA.", duration: "0:30", thumb: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=400&q=80" },
+    { id: "panico", title: "Escudo Invisible", desc: "Descubre cómo funciona el Botón de Pánico.", duration: "0:40", thumb: "https://images.unsplash.com/photo-1621252179027-94459d278660?auto=format&fit=crop&w=400&q=80" },
+    { id: "fiados", title: "Fiados Seguros", desc: "Controla a tus deudores sin estrés.", duration: "0:35", thumb: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=400&q=80" },
+    { id: "compras", title: "Asistente de Compras", desc: "No pierdas ventas por falta de stock.", duration: "0:35", thumb: "https://images.unsplash.com/photo-1588514930161-9c3f350c377d?auto=format&fit=crop&w=400&q=80" },
+];
 
 export function LandingScreen() {
+    const [activeVideo, setActiveVideo] = useState<string | null>(null);
     return (
         <div className="min-h-screen bg-white flex flex-col font-sans">
             {/* Header / Navbar */}
@@ -102,7 +111,7 @@ export function LandingScreen() {
                             <h2 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight mb-4">Funcionalidades Estrella</h2>
                             <p className="text-xl text-slate-600 font-medium">Todo lo que necesitas para que tu negocio crezca solo.</p>
                         </div>
-                        <div className="grid md:grid-cols-3 gap-8">
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                             <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 hover:-translate-y-2 transition-transform">
                                 <div className="w-14 h-14 bg-emerald-100 rounded-2xl flex items-center justify-center mb-6">
                                     <Store className="w-7 h-7 text-emerald-700" />
@@ -124,6 +133,57 @@ export function LandingScreen() {
                                 <h3 className="text-2xl font-black text-slate-900 mb-3">Asistente IA</h3>
                                 <p className="text-slate-600 font-medium leading-relaxed">Habla con tu sistema. Pídele reportes de ventas o registra compras solo usando tu voz.</p>
                             </div>
+                            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 hover:-translate-y-2 transition-transform">
+                                <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center mb-6">
+                                    <Users className="w-7 h-7 text-red-700" />
+                                </div>
+                                <h3 className="text-2xl font-black text-slate-900 mb-3">Red Colaborativa</h3>
+                                <p className="text-slate-600 font-medium leading-relaxed">Identifica con IA a personas reportadas por robos en bodegas cercanas y recibe alertas silenciosas.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Videos Demo */}
+                <section id="videos" className="py-24 px-6 md:px-12 bg-slate-900 relative">
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-16">
+                            <h2 className="text-4xl md:text-5xl font-black text-white tracking-tight mb-4">Míralo en Acción</h2>
+                            <p className="text-xl text-slate-400 font-medium">Descubre cómo Caserita Smart resuelve los problemas de tu bodega en segundos.</p>
+                        </div>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            {VIDEOS_DEMO.map((video) => (
+                                <div 
+                                    key={video.id} 
+                                    className={`group bg-slate-800 rounded-2xl overflow-hidden border border-slate-700 transition-all shadow-lg ${activeVideo === video.id ? 'border-emerald-500 ring-2 ring-emerald-500/50' : 'hover:border-emerald-500 hover:-translate-y-2 cursor-pointer'}`}
+                                >
+                                    <div className="relative aspect-video bg-black">
+                                        {activeVideo === video.id ? (
+                                            <OllamaTutorialAgent 
+                                                videoId={video.id} 
+                                                videoTitle={video.title} 
+                                                onClose={() => setActiveVideo(null)} 
+                                            />
+                                        ) : (
+                                            <div className="absolute inset-0" onClick={() => setActiveVideo(video.id)}>
+                                                <img src={video.thumb} alt={video.title} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                                <div className="absolute inset-0 flex items-center justify-center">
+                                                    <div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center pl-1 shadow-[0_0_20px_rgba(16,185,129,0.5)] group-hover:scale-110 transition-transform">
+                                                        <Play className="w-6 h-6 text-white fill-white" />
+                                                    </div>
+                                                </div>
+                                                <div className="absolute bottom-2 right-2 bg-black/80 px-2 py-1 rounded text-xs text-white font-bold backdrop-blur-sm">
+                                                    {video.duration}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="p-5" onClick={() => { if(activeVideo !== video.id) setActiveVideo(video.id) }}>
+                                        <h3 className="font-bold text-white text-lg mb-1">{video.title}</h3>
+                                        <p className="text-slate-400 text-sm">{video.desc}</p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </section>
