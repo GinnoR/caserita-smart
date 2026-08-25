@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { AsistentesPanel } from "@/components/AsistentesPanel";
 import ConfiguracionTributaria from "@/components/ConfiguracionTributaria";
 import { playSiren, stopSirenInternal } from "@/lib/siren-utils";
+import { supabaseService, getDemoInventory } from "@/lib/supabase-service";
 
 interface ConfigModalProps {
     isOpen: boolean;
@@ -146,7 +147,7 @@ export function ConfigModal({ isOpen, onClose, userId, cajeroNombre = 'Dueño/a'
                         {activeTab === "seguridad" && <SecuritySettings isOwner={isOwner} />}
                         {activeTab === "comunicaciones" && <CommSettings isOwner={isOwner} />}
                         {activeTab === "camaras" && <CameraSettings isOwner={isOwner} />}
-                        {activeTab === "tips" && <TipsSettings />}
+                        {activeTab === "tips" && <TipsSettings userId={userId} />}
                         {activeTab === "tributacion" && userId && <ConfiguracionTributaria userId={userId} />}
                         {activeTab === "asistentes" && userId && (
                             <AsistentesPanel userId={userId} isOwner={isOwner} />
@@ -450,9 +451,57 @@ function CameraSettings({ isOwner }: { isOwner: boolean }) {
     );
 }
 
-function TipsSettings() {
+function TipsSettings({ userId }: { userId?: string }) {
+    const [isSeeding, setIsSeeding] = useState(false);
+
+    const handleSeedData = async () => {
+        if (!userId) {
+            alert("No hay sesión activa.");
+            return;
+        }
+        setIsSeeding(true);
+        try {
+            const demoData = getDemoInventory();
+            const itemsForMaster = demoData.map(item => ({
+                code: item.cod_bar_produc,
+                name: item.nombre_producto,
+                um: item.um,
+                unidades_base: item.unidades_base,
+                stock: item.cantidad_ingreso,
+                price: item.p_u_venta
+            }));
+            const success = await supabaseService.saveProductMaster(userId, itemsForMaster);
+            if (success) {
+                alert("¡Base de datos actualizada con productos reales! Recarga la página para ver los cambios.");
+            } else {
+                alert("Hubo un error al actualizar la base de datos.");
+            }
+        } catch (e) {
+            console.error(e);
+            alert("Error: " + e);
+        } finally {
+            setIsSeeding(false);
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <SettingSection title="Datos de Demostración">
+                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-200">
+                    <h4 className="font-bold text-emerald-900 mb-2">Restaurar Catálogo Ideal</h4>
+                    <p className="text-sm text-emerald-800 mb-4">
+                        Si tu catálogo tiene precios en 0 o productos duplicados, puedes cargar nuestro <strong>catálogo de prueba</strong> con precios y cantidades reales para hacer videos o demostraciones perfectas.
+                    </p>
+                    <button 
+                        onClick={handleSeedData}
+                        disabled={isSeeding || !userId}
+                        className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-400 text-white font-bold py-2 px-6 rounded-lg transition-colors shadow-sm"
+                    >
+                        {isSeeding ? "Restaurando datos..." : "Inyectar Datos Realistas"}
+                    </button>
+                </div>
+            </SettingSection>
+
             <SettingSection title="Tips para Caseros (Vendedores)">
                 <div className="space-y-2">
                     <div className="p-3 bg-orange-50 border border-orange-100 rounded-lg text-sm text-slate-700">

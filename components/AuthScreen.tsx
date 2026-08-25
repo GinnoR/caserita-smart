@@ -234,10 +234,10 @@ export function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 
 
     // ── Pantalla principal auth ───────────────────────────────────
     return (
-        <div className="min-h-screen flex flex-col md:flex-row bg-slate-50">
+        <div className="min-h-full w-full flex flex-col md:flex-row bg-slate-50 overflow-y-auto">
 
             {/* ── COLUMNA MARCA (Limpia y visual) ── */}
-            <div className="hidden md:flex md:w-1/2 bg-slate-900 relative flex-col items-center justify-center overflow-hidden">
+            <div className="hidden md:flex md:w-1/2 bg-slate-900 relative flex-col items-center justify-center overflow-hidden min-h-screen">
                 <div className="absolute inset-0 opacity-40 mix-blend-overlay">
                     <img src="https://images.unsplash.com/photo-1604719312566-8912e9227c6a?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80" alt="Bodega" className="w-full h-full object-cover" />
                 </div>
@@ -253,12 +253,12 @@ export function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 
             </div>
 
             {/* ── COLUMNA DERECHA — Formulario Limpio ── */}
-            <div className="w-full md:w-1/2 bg-white flex flex-col items-center justify-center py-10 px-6 sm:px-12 lg:px-20 min-h-screen relative">
+            <div className="w-full md:w-1/2 bg-white flex flex-col items-center justify-start md:justify-center py-10 px-6 sm:px-12 lg:px-20 min-h-full relative pb-28 md:pb-12">
                 
                 <div className="w-full max-w-md mx-auto">
                     {/* Header para móviles */}
-                    <div className="md:hidden flex flex-col items-center mb-10">
-                        <div className="bg-emerald-500 w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg mb-4">
+                    <div className="md:hidden flex flex-col items-center mb-6 mt-4">
+                        <div className="bg-emerald-500 w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg mb-3">
                             <Store className="w-8 h-8 text-white" />
                         </div>
                         <h1 className="text-3xl font-black text-slate-800 tracking-tight">Caserita Smart</h1>

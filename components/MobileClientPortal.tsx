@@ -92,17 +92,20 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                         image_url: p.image_url
                     })));
                 } else {
-                    setProducts(data.map((row: any) => ({
-                        id: row.inventario.id,
-                        code: row.inventario.cod_bar_produc || row.inventario.id,
-                        name: row.inventario.nombre_producto,
-                        price: row.p_u_venta || 1.50,
-                        um: row.inventario.um || 'und',
-                        unidades_base: row.inventario.unidades_base || 1,
-                        sale_type: row.inventario.sale_type || 'empacado',
-                        stock: row.cantidad_ingreso || 0,
-                        image_url: row.custom_image_url || row.inventario.image_url
-                    })));
+                    setProducts(data
+                        .filter((row: any) => row && row.inventario)
+                        .map((row: any) => ({
+                            id: row.inventario.id,
+                            code: row.inventario.cod_bar_produc || row.inventario.id,
+                            name: row.inventario.nombre_producto,
+                            price: row.p_u_venta || 1.50,
+                            um: row.inventario.um || 'und',
+                            unidades_base: row.inventario.unidades_base || 1,
+                            sale_type: row.inventario.sale_type || 'empacado',
+                            stock: row.cantidad_ingreso || 0,
+                            image_url: row.custom_image_url || row.inventario.image_url
+                        }))
+                    );
                 }
                 setFetchError(null);
             } catch (err: any) {

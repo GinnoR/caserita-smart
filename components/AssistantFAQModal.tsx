@@ -12,7 +12,7 @@ const VIDEOS_DEMO = [
     { id: "ventas-voz", title: "Ventas sin teclear", desc: "Registra ventas usando solo tu voz con IA.", duration: "0:30", thumb: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&fit=crop&w=400&q=80" },
     { id: "panico", title: "Escudo Invisible", desc: "Descubre cómo funciona el Botón de Pánico.", duration: "0:40", thumb: "https://images.unsplash.com/photo-1621252179027-94459d278660?auto=format&fit=crop&w=400&q=80" },
     { id: "fiados", title: "Fiados Seguros", desc: "Controla a tus deudores sin estrés.", duration: "0:35", thumb: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=400&q=80" },
-    { id: "compras", title: "Asistente de Compras", desc: "No pierdas ventas por falta de stock.", duration: "0:35", thumb: "https://images.unsplash.com/photo-1588514930161-9c3f350c377d?auto=format&fit=crop&w=400&q=80" },
+    { id: "compras", title: "Asistente de Compras", desc: "No pierdas ventas por falta de stock.", duration: "0:35", thumb: "https://images.unsplash.com/photo-1604719312566-8912e9227c6a?auto=format&fit=crop&w=400&q=80" },
 ];
 
 const FAQ_DATA = [
@@ -257,6 +257,7 @@ export function AssistantFAQModal({ isOpen, onClose, speak }: AssistantFAQModalP
                                             <OllamaTutorialAgent 
                                                 videoId={video.id} 
                                                 videoTitle={video.title} 
+                                                thumbUrl={video.thumb}
                                                 onClose={() => setActiveVideo(null)} 
                                             />
                                         ) : (

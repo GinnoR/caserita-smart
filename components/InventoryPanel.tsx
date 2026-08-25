@@ -111,68 +111,169 @@ export function InventoryPanel({
                 )}
             </div>
 
-            <div className={cn("flex-1 overflow-hidden", isCollapsed ? "hidden" : "block")}>
-                <div ref={scrollRef} className="h-full overflow-y-auto p-4 scroll-smooth bg-slate-50">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {(inventory || [])
-                        .filter(item => {
+            <div className={cn("flex-1 overflow-hidden min-h-0 flex flex-col", isCollapsed ? "hidden" : "flex")}>
+                <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 scroll-smooth bg-slate-50 min-h-0">
+                    {(!inventory || inventory.length === 0) ? (
+                        <div className="flex flex-col items-center justify-center py-16 px-4 text-center text-slate-400">
+                            <Package className="w-12 h-12 mb-3 text-emerald-500 animate-bounce" />
+                            <p className="font-black text-slate-700 text-base">Cargando inventario de productos...</p>
+                            <p className="text-xs text-slate-500 mt-1">Sincronizando productos y precios en tiempo real</p>
+                        </div>
+                    ) : (inventory || []).filter(item => {
                             if (!activeSearch) return true;
                             const nameMatch = (item?.name?.toLowerCase() || "").includes(activeSearch);
                             const codeMatch = (item?.code?.toString().toLowerCase() || "").includes(activeSearch);
                             return nameMatch || codeMatch;
-                        })
-                        .map((item, idx) => {
-                            const availableStock = getAvailableStock(item);
-                            const display = formatStock(availableStock, item.unidades_base, item.name, item.um, item.sale_type);
-                            const isLowStock = availableStock <= (item.unidades_base > 1 ? item.unidades_base : 5);
-                            const expiryDate = item.fecha_caducidad ? new Date(item.fecha_caducidad) : null;
-                            const isExpired = expiryDate && expiryDate < new Date();
-                            const isNearExpiry = expiryDate && !isExpired && (expiryDate.getTime() - new Date().getTime()) / (86400000) <= 7;
+                        }).length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 px-4 text-center text-slate-400">
+                            <Search className="w-12 h-12 mb-3 text-slate-400" />
+                            <p className="font-black text-slate-700 text-base">No se encontraron productos</p>
+                            <p className="text-xs text-slate-500 mt-1">Intenta con otro nombre o código de barra</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                        {(inventory || [])
+                            .filter(item => {
+                                if (!activeSearch) return true;
+                                const nameMatch = (item?.name?.toLowerCase() || "").includes(activeSearch);
+                                const codeMatch = (item?.code?.toString().toLowerCase() || "").includes(activeSearch);
+                                return nameMatch || codeMatch;
+                            })
+                            .map((item, idx) => {
+                                const availableStock = getAvailableStock(item);
+                                const display = formatStock(availableStock, item.unidades_base, item.name, item.um, item.sale_type);
+                                const isLowStock = availableStock <= (item.unidades_base > 1 ? item.unidades_base : 5);
+                                const expiryDate = item.fecha_caducidad ? new Date(item.fecha_caducidad) : null;
+                                const isExpired = expiryDate && expiryDate < new Date();
+                                const isNearExpiry = expiryDate && !isExpired && (expiryDate.getTime() - new Date().getTime()) / (86400000) <= 7;
 
-                            return (
-                                <div key={idx} className="contents group">
-                                     {/* DESKTOP CARD (Grid Item) */}
-                                    <div
-                                        className={cn(
-                                            "hidden sm:flex flex-col justify-between p-4 bg-white rounded-3xl shadow-sm border-2 transition-all cursor-pointer hover:shadow-xl hover:-translate-y-1 active:scale-95 group/card",
-                                            isExpired ? "border-red-200 bg-red-50/30" : isNearExpiry ? "border-amber-200 bg-amber-50/30" : isLowStock ? "border-orange-300 bg-orange-50/50" : "border-slate-100 hover:border-blue-400",
-                                            availableStock <= 0 && "opacity-60 grayscale-[0.5]"
-                                        )}
-                                        onClick={() => availableStock > 0 && handleClickProduct(item)}
-                                    >
-                                        <div>
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className={cn(
-                                                    "text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded-lg",
-                                                    (isExpired || isNearExpiry) ? "bg-red-100 text-red-700" : isLowStock ? "bg-orange-200 text-orange-800 animate-pulse" : "bg-slate-100 text-slate-600"
-                                                )}>
-                                                    {item.category || 'Varios'}
-                                                </span>
-                                                <span className="font-mono text-[10px] text-slate-400 font-bold">{item.code?.substring(0, 8)}</span>
-                                            </div>
-                                            
-                                            <h3 className="font-black text-slate-900 text-lg leading-tight uppercase line-clamp-2 min-h-[2.5rem]">
-                                                {item.name}
-                                            </h3>
-                                        </div>
-
-                                        <div className="mt-4 flex flex-col gap-3">
-                                            <div className="flex justify-between items-end">
-                                                <div className="flex flex-col">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Precio</span>
-                                                    <span className="font-mono font-black text-blue-700 text-2xl leading-none">S/{item.price.toFixed(2)}</span>
+                                return (
+                                    <div key={idx} className="contents group">
+                                         {/* DESKTOP CARD (Grid Item) */}
+                                        <div
+                                            className={cn(
+                                                "hidden sm:flex flex-col justify-between p-4 bg-white rounded-3xl shadow-sm border-2 transition-all cursor-pointer hover:shadow-xl hover:-translate-y-1 active:scale-95 group/card",
+                                                isExpired ? "border-red-200 bg-red-50/30" : isNearExpiry ? "border-amber-200 bg-amber-50/30" : isLowStock ? "border-orange-300 bg-orange-50/50" : "border-slate-100 hover:border-blue-400",
+                                                availableStock <= 0 && "opacity-60 grayscale-[0.5]"
+                                            )}
+                                            onClick={() => availableStock > 0 && handleClickProduct(item)}
+                                        >
+                                            <div>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <span className={cn(
+                                                        "text-[10px] font-black tracking-widest uppercase px-2 py-1 rounded-lg",
+                                                        (isExpired || isNearExpiry) ? "bg-red-100 text-red-700" : isLowStock ? "bg-orange-200 text-orange-800 animate-pulse" : "bg-slate-100 text-slate-600"
+                                                    )}>
+                                                        {item.category || 'Varios'}
+                                                    </span>
+                                                    <span className="font-mono text-[10px] text-slate-400 font-bold">{item.code?.substring(0, 8)}</span>
                                                 </div>
-                                                <div className="flex flex-col items-end">
-                                                    <span className="text-[10px] font-bold text-slate-400 uppercase">Stock</span>
-                                                    <div className="flex items-baseline gap-1">
-                                                        <span className={cn("font-black text-xl leading-none", isLowStock ? "text-orange-600" : "text-slate-800")}>{display.qty}</span>
-                                                        <span className="text-[10px] font-black text-slate-500 uppercase">{display.unit}</span>
+                                                
+                                                <h3 className="font-black text-slate-900 text-lg leading-tight uppercase line-clamp-2 min-h-[2.5rem]">
+                                                    {item.name}
+                                                </h3>
+                                            </div>
+
+                                            <div className="mt-4 flex flex-col gap-3">
+                                                <div className="flex justify-between items-end">
+                                                    <div className="flex flex-col">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Precio</span>
+                                                        <span className="font-mono font-black text-blue-700 text-2xl leading-none">S/{item.price.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Stock</span>
+                                                        <div className="flex items-baseline gap-1">
+                                                            <span className={cn("font-black text-xl leading-none", isLowStock ? "text-orange-600" : "text-slate-800")}>{display.qty}</span>
+                                                            <span className="text-[10px] font-black text-slate-500 uppercase">{display.unit}</span>
+                                                        </div>
                                                     </div>
                                                 </div>
+
+                                                {/* Quick Add Buttons */}
+                                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleClickProduct(item, 1);
+                                                        }}
+                                                        disabled={availableStock <= 0}
+                                                        className={cn(
+                                                            "py-2 rounded-xl flex items-center justify-center font-black transition-all",
+                                                            availableStock <= 0 ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-500 hover:text-white"
+                                                        )}
+                                                    >
+                                                        <Plus className="w-5 h-5" /> 1
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleClickProduct(item, 5);
+                                                        }}
+                                                        disabled={availableStock < 5}
+                                                        className={cn(
+                                                            "py-2 rounded-xl flex items-center justify-center font-black transition-all",
+                                                            availableStock < 5 ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white"
+                                                        )}
+                                                    >
+                                                        <Plus className="w-5 h-5" /> 5
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* MOBILE CARD - COMPACT */}
+                                        <div
+                                            className={cn(
+                                                "sm:hidden flex items-center justify-between p-3 rounded-2xl shadow-sm border transition-all active:scale-[0.98] duration-200",
+                                                isExpired 
+                                                    ? "bg-red-50 border-red-200" 
+                                                    : isNearExpiry 
+                                                    ? "bg-amber-50 border-amber-200" 
+                                                    : isLowStock 
+                                                    ? "bg-orange-50 border-orange-200" 
+                                                    : "bg-white border-slate-100",
+                                                availableStock <= 0 && "opacity-75 grayscale-[0.3]"
+                                            )}
+                                            onClick={() => availableStock > 0 && handleClickProduct(item)}
+                                        >
+                                            <div className="flex-1 min-w-0 pr-2">
+                                                <div className="flex items-center gap-1.5 mb-0.5">
+                                                    <span className={cn(
+                                                        "text-[8px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded",
+                                                        (isExpired || isNearExpiry) ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
+                                                    )}>
+                                                        {item.brand || 'Gral'}
+                                                    </span>
+                                                    {isLowStock && !isExpired && !isNearExpiry && (
+                                                        <span className="text-[8px] font-black text-orange-600 animate-pulse">BAJO STOCK</span>
+                                                    )}
+                                                    <span className="text-[8px] font-bold text-slate-400 uppercase ml-1">
+                                                        {item.category || 'Varios'}
+                                                    </span>
+                                                </div>
+                                                <h3 className="text-xs font-black leading-tight uppercase line-clamp-1 text-slate-900">
+                                                    {item.name}
+                                                </h3>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <span className="text-sm font-black text-blue-700">
+                                                        S/ {item.price.toFixed(2)}
+                                                    </span>
+                                                    <span className="text-[9px] font-bold text-slate-500 uppercase bg-slate-100 px-1.5 rounded">
+                                                        Stk: {display.qty} {display.unit}
+                                                    </span>
+                                                </div>
                                             </div>
 
-                                            {/* Quick Add Buttons */}
-                                            <div className="grid grid-cols-2 gap-2 mt-2">
+                                            <div className="flex items-center gap-1.5">
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleClickProduct(item, -1);
+                                                    }}
+                                                    className="h-8 w-8 rounded-full flex items-center justify-center bg-red-50 text-red-600 shadow-sm border border-red-100 active:scale-90 transition-all"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
                                                 <button 
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -180,105 +281,23 @@ export function InventoryPanel({
                                                     }}
                                                     disabled={availableStock <= 0}
                                                     className={cn(
-                                                        "py-2 rounded-xl flex items-center justify-center font-black transition-all",
-                                                        availableStock <= 0 ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-emerald-100 text-emerald-700 hover:bg-emerald-500 hover:text-white"
+                                                        "h-10 w-10 rounded-full flex items-center justify-center shadow-sm border transition-all active:scale-90",
+                                                        availableStock <= 0
+                                                          ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                                                          : "bg-blue-600 text-white border-blue-700 hover:bg-blue-700"
                                                     )}
                                                 >
-                                                    <Plus className="w-5 h-5" /> 1
-                                                </button>
-                                                <button 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleClickProduct(item, 5);
-                                                    }}
-                                                    disabled={availableStock < 5}
-                                                    className={cn(
-                                                        "py-2 rounded-xl flex items-center justify-center font-black transition-all",
-                                                        availableStock < 5 ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-blue-100 text-blue-700 hover:bg-blue-600 hover:text-white"
-                                                    )}
-                                                >
-                                                    <Plus className="w-5 h-5" /> 5
+                                                    <Plus className="w-5 h-5" />
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
-
-                                    {/* MOBILE CARD - COMPACT */}
-                                    <div
-                                        className={cn(
-                                            "sm:hidden flex items-center justify-between p-3 rounded-2xl shadow-sm border transition-all active:scale-[0.98] duration-200",
-                                            isExpired 
-                                                ? "bg-red-50 border-red-200" 
-                                                : isNearExpiry 
-                                                ? "bg-amber-50 border-amber-200" 
-                                                : isLowStock 
-                                                ? "bg-orange-50 border-orange-200" 
-                                                : "bg-white border-slate-100",
-                                            availableStock <= 0 && "opacity-75 grayscale-[0.3]"
-                                        )}
-                                        onClick={() => availableStock > 0 && handleClickProduct(item)}
-                                    >
-                                        <div className="flex-1 min-w-0 pr-2">
-                                            <div className="flex items-center gap-1.5 mb-0.5">
-                                                <span className={cn(
-                                                    "text-[8px] font-black tracking-widest uppercase px-1.5 py-0.5 rounded",
-                                                    (isExpired || isNearExpiry) ? "bg-red-100 text-red-700" : "bg-slate-100 text-slate-600"
-                                                )}>
-                                                    {item.brand || 'Gral'}
-                                                </span>
-                                                {isLowStock && !isExpired && !isNearExpiry && (
-                                                    <span className="text-[8px] font-black text-orange-600 animate-pulse">BAJO STOCK</span>
-                                                )}
-                                                <span className="text-[8px] font-bold text-slate-400 uppercase ml-1">
-                                                    {item.category || 'Varios'}
-                                                </span>
-                                            </div>
-                                            <h3 className="text-xs font-black leading-tight uppercase line-clamp-1 text-slate-900">
-                                                {item.name}
-                                            </h3>
-                                            <div className="flex items-center gap-2 mt-0.5">
-                                                <span className="text-sm font-black text-blue-700">
-                                                    S/ {item.price.toFixed(2)}
-                                                </span>
-                                                <span className="text-[9px] font-bold text-slate-500 uppercase bg-slate-100 px-1.5 rounded">
-                                                    Stk: {display.qty} {display.unit}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center gap-1.5">
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleClickProduct(item, -1);
-                                                }}
-                                                className="h-8 w-8 rounded-full flex items-center justify-center bg-red-50 text-red-600 shadow-sm border border-red-100 active:scale-90 transition-all"
-                                            >
-                                                <X className="w-4 h-4" />
-                                            </button>
-                                            <button 
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleClickProduct(item, 1);
-                                                }}
-                                                disabled={availableStock <= 0}
-                                                className={cn(
-                                                    "h-10 w-10 rounded-full flex items-center justify-center shadow-sm border transition-all active:scale-90",
-                                                    availableStock <= 0
-                                                        ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                                                        : "bg-blue-600 text-white border-blue-700 hover:bg-blue-700"
-                                                )}
-                                            >
-                                                <Plus className="w-5 h-5" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })}
+                                );
+                            })}
                         </div>
-                    </div>
+                    )}
                 </div>
+            </div>
 
             {/* MODAL VISTA PREVIA CATÁLOGO */}
             {showPreview && (

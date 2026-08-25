@@ -27,7 +27,7 @@ import { usePanicMode } from "@/hooks/usePanicMode";
 import { useExportReport } from "@/hooks/useExportReport";
 import { SecurityPanel } from "@/components/SecurityPanel";
 import { CartItem, Sale, createSale, computeDailySummary, DailySummary } from "@/lib/sales";
-import { supabaseService } from "@/lib/supabase-service";
+import { supabaseService, getDemoInventory } from "@/lib/supabase-service";
 import { formatStock } from "@/lib/format-utils";
 import { localParse, findBestProductMatch as findBestProductMatchUnified, getTopProductMatches } from "@/utils/matching";
 import { offlineService } from "@/lib/offline-service";
@@ -1112,29 +1112,22 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     supabaseService.getCustomers().catch(() => [])
                 ]);
 
-                if (invData && invData.length > 0) {
-                    setInventory(invData.map(i => ({
-                        id: i.id,
-                        code: i.cod_bar_produc || i.id.toString(),
-                        name: i.nombre_producto,
-                        brand: i.marca_producto,
-                        category: i.categoria,
-                        stock: i.cantidad_ingreso ?? 50,
-                        price: i.p_u_venta ?? 1.50,
-                        costo_compra: i.p_u_compra ?? 1.00,
-                        ubicacion: i.ubicacion || null,
-                        fecha_caducidad: i.fecha_caducidad || null,
-                        saleType: 'empacado',
-                        um: i.um || 'und',
-                        unidades_base: i.unidades_base ?? 1
-                    })));
-                } else {
-                    console.log("⚠️ No se encontró inventario en DB, usando DEMO");
-                    // Fallback to manual demo data if DB is empty
-                    setInventory([
-                        { id: 1, code: 'H1', name: 'Arroz Extra (Saco 50kg)', brand: '-', category: 'Abarrotes', stock: 100, price: 180.00, um: 'kg', unidades_base: 50 }
-                    ]);
-                }
+                const finalInvList = (invData && invData.length > 0) ? invData : getDemoInventory();
+                setInventory(finalInvList.map((i: any) => ({
+                    id: i.id,
+                    code: i.cod_bar_produc || i.id.toString(),
+                    name: i.nombre_producto,
+                    brand: i.marca_producto || 'Gral',
+                    category: i.categoria || 'Varios',
+                    stock: i.cantidad_ingreso ?? 50,
+                    price: i.p_u_venta ?? 1.50,
+                    costo_compra: i.costo_compra ?? i.p_u_compra ?? 1.00,
+                    ubicacion: i.ubicacion || null,
+                    fecha_caducidad: i.fecha_caducidad || null,
+                    saleType: 'empacado',
+                    um: i.um || 'und',
+                    unidades_base: i.unidades_base ?? 1
+                })));
 
                 setCustomers((custData || []).map(c => ({
                     ...c,
@@ -1887,7 +1880,9 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         )}
 
                         {activeTab === 'inventario' && (
-                            <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
+                            <div className="flex-1 min-h-[500px] flex flex-col">
+                                <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
+                            </div>
                         )}
                     </div>
 

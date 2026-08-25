@@ -84,27 +84,29 @@ export const supabaseService = {
                     .select(`
                         id, cantidad_ingreso, p_u_venta, p_u_compra,
                         inventario (
-                            id, cod_bar_produc, nombre_producto, marca_producto, categoria, ubicacion, um, unidades_base
+                            id, cod_bar_produc, nombre_producto, marca_producto, categoria, ubicacion, um, unidades_base, fecha_caducidad
                         )
                     `)
                     .eq('cod_casero', codCasero)
                     .order('id', { ascending: true });
 
                 if (!error && data && data.length > 0) {
-                    finalInventory = data.map((row: any) => ({
-                        id: row.inventario.id,
-                        cod_bar_produc: row.inventario.cod_bar_produc,
-                        nombre_producto: row.inventario.nombre_producto,
-                        marca_producto: row.inventario.marca_producto,
-                        categoria: row.inventario.categoria,
-                        ubicacion: row.inventario.ubicacion,
-                        fecha_caducidad: row.inventario.fecha_caducidad ?? null,
-                        cantidad_ingreso: row.cantidad_ingreso ?? 50,
-                        p_u_venta: row.p_u_venta ?? 1.50,
-                        p_u_compra: row.p_u_compra ?? 1.00,
-                        um: row.inventario.um ?? 'und',
-                        unidades_base: row.inventario.unidades_base ?? 1,
-                    }));
+                    finalInventory = data
+                        .filter((row: any) => row && row.inventario)
+                        .map((row: any) => ({
+                            id: row.inventario.id,
+                            cod_bar_produc: row.inventario.cod_bar_produc,
+                            nombre_producto: row.inventario.nombre_producto,
+                            marca_producto: row.inventario.marca_producto,
+                            categoria: row.inventario.categoria,
+                            ubicacion: row.inventario.ubicacion,
+                            fecha_caducidad: row.inventario.fecha_caducidad ?? null,
+                            cantidad_ingreso: row.cantidad_ingreso ?? 50,
+                            p_u_venta: row.p_u_venta ?? 1.50,
+                            p_u_compra: row.p_u_compra ?? 1.00,
+                            um: row.inventario.um ?? 'und',
+                            unidades_base: row.inventario.unidades_base ?? 1,
+                        }));
                 } else if (codCasero === '00000000-0000-0000-0000-000000000001') {
                     // Si es el usuario DEMO y no hay stock en DB, devolver inventario realista de demostración
                     finalInventory = getDemoInventory();
@@ -118,36 +120,37 @@ export const supabaseService = {
                     .select('*')
                     .order('nombre_producto', { ascending: true });
 
-                if (error) {
-                    throw error;
-                }
-                finalInventory = (data || []).map(item => {
-                    let p_u_venta = 1.50;
-                    const name = (item.nombre_producto || '').toLowerCase();
-                    if (name.includes('arroz') || name.includes('azucar') || name.includes('fideo')) p_u_venta = 4.50;
-                    else if (name.includes('aceite')) p_u_venta = 8.50;
-                    else if (name.includes('leche')) p_u_venta = 4.20;
-                    else if (name.includes('atun') || name.includes('atún')) p_u_venta = 5.50;
-                    else if (name.includes('huevo')) p_u_venta = 7.50;
-                    else if (name.includes('jabon') || name.includes('jabón')) p_u_venta = 2.50;
-                    else if (name.includes('gaseosa') || name.includes('inka') || name.includes('coca')) p_u_venta = 3.50;
-                    else p_u_venta = 3.00;
+                if (!error && data && data.length > 0) {
+                    finalInventory = data.map(item => {
+                        let p_u_venta = 1.50;
+                        const name = (item.nombre_producto || '').toLowerCase();
+                        if (name.includes('arroz') || name.includes('azucar') || name.includes('fideo')) p_u_venta = 4.50;
+                        else if (name.includes('aceite')) p_u_venta = 8.50;
+                        else if (name.includes('leche')) p_u_venta = 4.20;
+                        else if (name.includes('atun') || name.includes('atún')) p_u_venta = 5.50;
+                        else if (name.includes('huevo')) p_u_venta = 7.50;
+                        else if (name.includes('jabon') || name.includes('jabón')) p_u_venta = 2.50;
+                        else if (name.includes('gaseosa') || name.includes('inka') || name.includes('coca')) p_u_venta = 3.50;
+                        else p_u_venta = 3.00;
 
-                    return {
-                        id: item.id,
-                        cod_bar_produc: item.cod_bar_produc,
-                        nombre_producto: item.nombre_producto,
-                        marca_producto: item.marca_producto,
-                        categoria: item.categoria,
-                        ubicacion: item.ubicacion,
-                        um: item.um ?? 'und',
-                        unidades_base: item.unidades_base ?? 1,
-                        fecha_caducidad: item.fecha_caducidad ?? null,
-                        cantidad_ingreso: item.stock_actual ?? 50,
-                        p_u_venta: p_u_venta,
-                        p_u_compra: p_u_venta - 1.00,
-                    };
-                });
+                        return {
+                            id: item.id,
+                            cod_bar_produc: item.cod_bar_produc,
+                            nombre_producto: item.nombre_producto,
+                            marca_producto: item.marca_producto,
+                            categoria: item.categoria,
+                            ubicacion: item.ubicacion,
+                            um: item.um ?? 'und',
+                            unidades_base: item.unidades_base ?? 1,
+                            fecha_caducidad: item.fecha_caducidad ?? null,
+                            cantidad_ingreso: item.stock_actual ?? 50,
+                            p_u_venta: p_u_venta,
+                            p_u_compra: p_u_venta - 1.00,
+                        };
+                    });
+                } else {
+                    finalInventory = getDemoInventory();
+                }
             }
 
             // Guardar en cache local si tuvo éxito
@@ -158,7 +161,7 @@ export const supabaseService = {
         } catch (e) {
             console.error('[Supabase] Error o sin conexión. Usando cache local:', e);
             const cached = offlineService.getInventory();
-            return cached || getDemoInventory();
+            return (cached && cached.length > 0) ? cached : getDemoInventory();
         }
     },
 
@@ -759,7 +762,7 @@ export const supabaseService = {
 // ============================================================
 // Inventario de demostración (cuando Supabase no está configurado)
 // ============================================================
-function getDemoInventory(): InventoryItem[] {
+export function getDemoInventory(): InventoryItem[] {
     return [
         { id: 101, cod_bar_produc: 'AB-101', nombre_producto: 'Arroz Extra Costeño (Saco 50kg)', marca_producto: 'Costeño', categoria: 'Abarrotes', cantidad_ingreso: 5, p_u_venta: 185.00, p_u_compra: 162.00, um: 'Kg', unidades_base: 50 },
         { id: 102, cod_bar_produc: 'AB-102', nombre_producto: 'Azúcar Rubia Paramonga (Saco 50kg)', marca_producto: 'Paramonga', categoria: 'Abarrotes', cantidad_ingreso: 8, p_u_venta: 160.00, p_u_compra: 140.00, um: 'Kg', unidades_base: 50 },
