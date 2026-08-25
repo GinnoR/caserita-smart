@@ -234,7 +234,7 @@ export function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 
 
     // ── Pantalla principal auth ───────────────────────────────────
     return (
-        <div className="min-h-full w-full flex flex-col md:flex-row bg-slate-50 overflow-y-auto">
+        <div className="min-h-screen w-full flex flex-col md:flex-row bg-slate-50">
 
             {/* ── COLUMNA MARCA (Limpia y visual) ── */}
             <div className="hidden md:flex md:w-1/2 bg-slate-900 relative flex-col items-center justify-center overflow-hidden min-h-screen">
@@ -253,7 +253,7 @@ export function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 
             </div>
 
             {/* ── COLUMNA DERECHA — Formulario Limpio ── */}
-            <div className="w-full md:w-1/2 bg-white flex flex-col items-center justify-start md:justify-center py-10 px-6 sm:px-12 lg:px-20 min-h-full relative pb-28 md:pb-12">
+            <div className="w-full md:w-1/2 bg-white flex flex-col items-center justify-start md:justify-center py-10 px-6 sm:px-12 lg:px-20 min-h-screen relative pb-44 md:pb-12">
                 
                 <div className="w-full max-w-md mx-auto">
                     {/* Header para móviles */}

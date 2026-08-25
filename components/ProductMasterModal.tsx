@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState, useMemo, useEffect } from "react";
-import { Lock, Search, Plus, Edit2, Trash2, X, Check, ShieldCheck, AlertCircle, MapPin, Calendar } from "lucide-react";
+import { Lock, Search, Plus, Edit2, Trash2, X, Check, ShieldCheck, AlertCircle, MapPin, Calendar, PackagePlus } from "lucide-react";
 import { supabaseService } from "@/lib/supabase-service";
 import { supabase } from "@/utils/supabase/client";
 import { formatStock } from "@/lib/format-utils";
@@ -480,7 +480,7 @@ export function ProductMasterModal({ isOpen, onClose, inventory, setInventory, i
                                             ))}
                                             {filteredInventory.length === 0 && (
                                                 <tr>
-                                                    <td colSpan={6} className="p-8 text-center text-slate-500">
+                                                    <td colSpan={8} className="p-8 text-center text-slate-500">
                                                         No se encontraron productos coincidentes.
                                                     </td>
                                                 </tr>
