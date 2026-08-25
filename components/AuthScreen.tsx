@@ -253,22 +253,22 @@ export function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 
             </div>
 
             {/* ── COLUMNA DERECHA — Formulario Limpio ── */}
-            <div className="w-full md:w-1/2 bg-white flex flex-col items-center justify-start md:justify-center py-10 px-6 sm:px-12 lg:px-20 min-h-screen relative pb-44 md:pb-12">
+            <div className="w-full md:w-1/2 bg-white flex flex-col items-center justify-center py-6 px-5 sm:px-10 lg:px-20 min-h-[calc(100vh-2rem)] md:min-h-screen relative">
                 
-                <div className="w-full max-w-md mx-auto">
+                <div className="w-full max-w-md mx-auto my-auto flex flex-col justify-center">
                     {/* Header para móviles */}
-                    <div className="md:hidden flex flex-col items-center mb-6 mt-4">
-                        <div className="bg-emerald-500 w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg mb-3">
-                            <Store className="w-8 h-8 text-white" />
+                    <div className="md:hidden flex flex-col items-center mb-4 mt-2">
+                        <div className="bg-emerald-500 w-12 h-12 rounded-2xl flex items-center justify-center shadow-md mb-2">
+                            <Store className="w-6 h-6 text-white" />
                         </div>
-                        <h1 className="text-3xl font-black text-slate-800 tracking-tight">Caserita Smart</h1>
+                        <h1 className="text-2xl font-black text-slate-800 tracking-tight">Caserita Smart</h1>
                     </div>
 
-                    <div className="mb-8 text-center md:text-left">
-                        <h2 className="text-2xl md:text-3xl font-black text-slate-800">
+                    <div className="mb-4 text-center md:text-left">
+                        <h2 className="text-xl md:text-3xl font-black text-slate-800">
                             {mode === 'login' ? 'Bienvenido de vuelta' : 'Crea tu cuenta gratis'}
                         </h2>
-                        <p className="text-slate-500 mt-2">
+                        <p className="text-slate-500 text-xs md:text-sm mt-1">
                             {mode === 'login' 
                                 ? 'Ingresa tus credenciales para acceder a tu bodega.' 
                                 : 'Registra tu bodega y comienza a controlar tus ventas.'}
@@ -276,85 +276,85 @@ export function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 
                     </div>
 
                     {/* Tabs sutiles */}
-                    <div className="flex bg-slate-100 p-1.5 rounded-xl mb-8 border border-slate-200">
+                    <div className="flex bg-slate-100 p-1 rounded-xl mb-4 border border-slate-200">
                         <button onClick={() => { setMode('login'); setError(null); setSuccessMsg(null); }}
-                            className={`flex-1 py-2.5 text-sm md:text-base font-bold rounded-lg transition-all ${mode === 'login' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                            className={`flex-1 py-2 text-xs md:text-base font-bold rounded-lg transition-all ${mode === 'login' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                             Ingresar
                         </button>
                         <button onClick={() => { setMode('register'); setError(null); setSuccessMsg(null); }}
-                            className={`flex-1 py-2.5 text-sm md:text-base font-bold rounded-lg transition-all ${mode === 'register' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
+                            className={`flex-1 py-2 text-xs md:text-base font-bold rounded-lg transition-all ${mode === 'register' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>
                             Registrarse
                         </button>
                     </div>
 
                     {successMsg && (
-                        <div className="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-800 font-medium">
-                            <div className="flex items-start gap-2"><CheckCircle className="w-5 h-5 shrink-0 mt-0.5 text-emerald-600" /><span style={{ whiteSpace: 'pre-line' }}>{successMsg}</span></div>
+                        <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs md:text-sm text-emerald-800 font-medium">
+                            <div className="flex items-start gap-2"><CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-emerald-600" /><span style={{ whiteSpace: 'pre-line' }}>{successMsg}</span></div>
                         </div>
                     )}
                     {error && (
-                        <div className="mb-6 p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 flex items-start gap-3">
-                            <AlertCircle className="w-6 h-6 shrink-0 text-rose-500" />
-                            <div className="text-sm font-medium pt-0.5">{error}</div>
+                        <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-900 flex items-start gap-2.5">
+                            <AlertCircle className="w-5 h-5 shrink-0 text-rose-500" />
+                            <div className="text-xs md:text-sm font-medium pt-0.5">{error}</div>
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
+                    <form onSubmit={handleSubmit} className="space-y-3">
                         {/* ── LOGIN ── */}
                         {mode === 'login' && (
                             <>
-                                <Field label="Correo Electrónico" icon={<Mail className="w-5 h-5 text-slate-400" />}>
+                                <Field label="Correo Electrónico" icon={<Mail className="w-4 h-4 text-slate-400" />}>
                                     <input type="email" value={loginEmail} onChange={e => setLoginEmail(e.target.value)}
                                         placeholder="tucorreo@gmail.com" className={inputClass} required />
                                 </Field>
-                                <Field label="PIN Secreto" icon={<ShieldCheck className="w-5 h-5 text-slate-400" />}>
+                                <Field label="PIN Secreto" icon={<ShieldCheck className="w-4 h-4 text-slate-400" />}>
                                     <input type="password" value={loginPin}
-                                        onChange={e => setLoginPin(e.target.value.replace(/\\D/g, '').slice(0, 4))}
+                                        onChange={e => setLoginPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                         placeholder="••••" maxLength={4} inputMode="numeric"
-                                        className={`${inputClass} tracking-[0.5em] font-mono text-xl`} required />
+                                        className={`${inputClass} tracking-[0.4em] font-mono text-lg`} required />
                                 </Field>
                             </>
                         )}
 
                         {/* ── REGISTRO ── */}
                         {mode === 'register' && (
-                            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2 pb-2 scrollbar-thin scrollbar-thumb-slate-200">
-                                <Field label="Nombre de la Bodega *" icon={<Store className="w-5 h-5 text-slate-400" />}>
+                            <div className="space-y-3 max-h-[45vh] overflow-y-auto pr-1 pb-1 scrollbar-thin scrollbar-thumb-slate-200">
+                                <Field label="Nombre de la Bodega *" icon={<Store className="w-4 h-4 text-slate-400" />}>
                                     <input type="text" value={businessName} onChange={e => setBusinessName(e.target.value)}
                                         placeholder="Ej. Bodega Doña Rosa" className={inputClass} required />
                                 </Field>
-                                <Field label="Nombre Completo *" icon={<User className="w-5 h-5 text-slate-400" />}>
+                                <Field label="Nombre Completo *" icon={<User className="w-4 h-4 text-slate-400" />}>
                                     <input type="text" value={fullName} onChange={e => setFullName(e.target.value)}
                                         placeholder="Ej. Rosa Mamani Quispe" className={inputClass} required />
                                 </Field>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <Field label="DNI *" icon={<CreditCard className="w-5 h-5 text-slate-400" />}>
-                                        <input type="text" value={dni} onChange={e => setDni(e.target.value.replace(/\\D/g, '').slice(0, 8))}
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <Field label="DNI *" icon={<CreditCard className="w-4 h-4 text-slate-400" />}>
+                                        <input type="text" value={dni} onChange={e => setDni(e.target.value.replace(/\D/g, '').slice(0, 8))}
                                             placeholder="12345678" maxLength={8} inputMode="numeric" className={inputClass} required />
                                     </Field>
-                                    <Field label="RUC (Opcional)" icon={<Building2 className="w-5 h-5 text-slate-400" />}>
-                                        <input type="text" value={ruc} onChange={e => setRuc(e.target.value.replace(/\\D/g, '').slice(0, 11))}
+                                    <Field label="RUC (Opcional)" icon={<Building2 className="w-4 h-4 text-slate-400" />}>
+                                        <input type="text" value={ruc} onChange={e => setRuc(e.target.value.replace(/\D/g, '').slice(0, 11))}
                                             placeholder="20123456789" maxLength={11} inputMode="numeric" className={inputClass} />
                                     </Field>
                                 </div>
-                                <Field label="Correo Electrónico *" icon={<Mail className="w-5 h-5 text-slate-400" />}>
+                                <Field label="Correo Electrónico *" icon={<Mail className="w-4 h-4 text-slate-400" />}>
                                     <input type="email" value={email} onChange={e => setEmail(e.target.value)}
                                         placeholder="tucorreo@gmail.com" className={inputClass} required />
                                 </Field>
-                                <Field label="WhatsApp *" icon={<Smartphone className="w-5 h-5 text-slate-400" />}>
+                                <Field label="WhatsApp *" icon={<Smartphone className="w-4 h-4 text-slate-400" />}>
                                     <input type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)}
                                         placeholder="999 888 777" className={inputClass} required />
                                 </Field>
-                                <Field label="PIN Secreto (4 dígitos) *" icon={<ShieldCheck className="w-5 h-5 text-slate-400" />}>
-                                    <input type="password" value={pin} onChange={e => setPin(e.target.value.replace(/\\D/g, '').slice(0, 4))}
+                                <Field label="PIN Secreto (4 dígitos) *" icon={<ShieldCheck className="w-4 h-4 text-slate-400" />}>
+                                    <input type="password" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                                         placeholder="••••" maxLength={4} inputMode="numeric"
-                                        className={`${inputClass} tracking-[0.5em] font-mono text-xl`} required />
+                                        className={`${inputClass} tracking-[0.4em] font-mono text-lg`} required />
                                 </Field>
                             </div>
                         )}
 
                         <button type="submit" disabled={isLoading}
-                            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-lg py-4 rounded-xl shadow-lg flex items-center justify-center gap-2 transition-all active:scale-95 mt-6">
+                            className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 text-white font-bold text-base md:text-lg py-3 md:py-3.5 rounded-xl shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 mt-4">
                             {isLoading ? (
                                 <><Loader2 className="w-5 h-5 animate-spin" /> Procesando...</>
                             ) : mode === 'login' ? (
@@ -367,35 +367,35 @@ export function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 
 
                     {/* Modo Demo ahora es sutil y secundario */}
                     {mode === 'login' && (
-                        <div className="mt-6 text-center">
-                            <button onClick={handleDemoAccess} className="text-sm font-medium text-slate-500 hover:text-emerald-600 transition-colors">
+                        <div className="mt-4 text-center">
+                            <button onClick={handleDemoAccess} className="text-xs md:text-sm font-medium text-slate-500 hover:text-emerald-600 transition-colors">
                                 ¿No tienes cuenta? Entrar en Modo Demo
                             </button>
                         </div>
                     )}
                     
-                    <div className="absolute top-6 left-6 md:hidden">
-                        <Link href="/" className="text-slate-400 hover:text-slate-600 font-medium text-sm flex items-center gap-1">
+                    <div className="absolute top-4 left-4 md:hidden">
+                        <Link href="/" className="text-slate-400 hover:text-slate-600 font-medium text-xs flex items-center gap-1">
                             &larr; Volver
                         </Link>
                     </div>
 
                 </div>
             </div>
-        </div >
+        </div>
     );
 }
 
 
 // ── Helpers de UI ─────────────────────────────────────────────────
-const inputClass = "w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white outline-none text-slate-900 font-medium text-base placeholder:text-slate-400 transition-all";
+const inputClass = "w-full pl-10 pr-3 py-2.5 md:py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:bg-white outline-none text-slate-900 font-medium text-sm md:text-base placeholder:text-slate-400 transition-all";
 
 function Field({ label, icon, children }: { label: string; icon: React.ReactNode; children: React.ReactNode }) {
     return (
-        <div className="space-y-1.5 text-left">
-            {label && <label className="block text-sm font-bold text-slate-700 ml-1">{label}</label>}
-            <div className="relative">
-                <div className="absolute left-4 top-3.5">{icon}</div>
+        <div className="space-y-1 text-left">
+            <label className="text-[11px] md:text-xs font-bold text-slate-600 uppercase tracking-wider block">{label}</label>
+            <div className="relative flex items-center">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">{icon}</span>
                 {children}
             </div>
         </div>
