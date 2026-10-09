@@ -35,16 +35,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <body className={cn(inter.className, "bg-slate-900 text-white min-h-screen relative flex flex-col antialiased selection:bg-emerald-500 selection:text-white")}>
+    <html lang="es" className="h-full">
+      <body className={cn(inter.className, "bg-slate-900 text-white h-full min-h-screen relative flex flex-col antialiased selection:bg-emerald-500 selection:text-white overflow-hidden")}>
         <PWARegister />
         <InstallPWA />
         <ClientLayoutCleaner />
         <GlobalEmergencyOverlay />
-        <div className="fixed top-0 left-0 right-0 z-[9999] bg-emerald-600 text-white text-[12px] font-black text-center py-2 border-b-2 border-emerald-400 pointer-events-none animate-pulse shadow-md">
+        <div className="fixed top-0 left-0 right-0 z-[9999] bg-emerald-600 text-white text-[12px] font-black text-center py-1.5 border-b-2 border-emerald-400 pointer-events-none animate-pulse shadow-md h-8 flex items-center justify-center">
            🟢 SISTEMA v4.0 - CONFIG-VOZ ACTIVA (ACTUALIZADO - MODO PROD)
         </div>
-        <div className="pt-8 flex-1 w-full min-h-screen flex flex-col">
+        <div className="pt-8 flex-1 w-full h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden min-h-0">
           {children}
         </div>
       </body>

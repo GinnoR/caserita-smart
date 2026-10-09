@@ -1497,11 +1497,20 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     };
 
     const [activeTab, setActiveTab] = useState<'pedidos' | 'inventario' | 'reportes' | 'cámaras' | 'config' | 'acciones'>('pedidos');
-    const [isMobile, setIsMobile] = useState(false);
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window !== "undefined") {
+            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            return window.innerWidth < 1024 || isMobileDevice;
+        }
+        return false;
+    });
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     useEffect(() => {
-        const check = () => setIsMobile(window.innerWidth < 768);
+        const check = () => {
+            const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            setIsMobile(window.innerWidth < 1024 || isMobileDevice);
+        };
         check();
         window.addEventListener('resize', check);
         return () => window.removeEventListener('resize', check);
@@ -1575,7 +1584,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     }
 
     return (
-        <main style={isMobile ? { height: '100dvh', overflow: 'auto', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : {}} className={isMobile ? '' : 'flex flex-1 flex-col h-full overflow-hidden bg-slate-200 min-h-0'}>
+        <main style={isMobile ? { height: '100dvh', overflow: 'auto', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : { height: '100%', maxHeight: '100%', overflow: 'hidden' }} className={isMobile ? '' : 'flex flex-1 flex-col h-full max-h-full overflow-hidden bg-slate-200 min-h-0'}>
             <Header onLogout={onLogout} aiMode={aiMode} onModeChange={handleModeChange} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} onOpenFAQ={() => setShowFAQ(true)} />
 
             {/* ONBOARDING GUIDE — only for new users */}
@@ -1695,16 +1704,16 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         {activeTab === 'pedidos' && (
                             <div className="flex flex-1 gap-4 overflow-hidden min-h-0">
                                 {/* Zona Izquierda: Buscador e Inventario visual */}
-                                <div className="flex-[3] flex flex-col min-h-0 overflow-hidden bg-white rounded-3xl shadow-sm border border-slate-200">
+                                <div className="flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden bg-white rounded-3xl shadow-sm border border-slate-200">
                                      <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
                                 </div>
                                 
                                 {/* Zona Derecha: Carrito y Cobro */}
-                                <div className="flex-[2] flex flex-col gap-4 overflow-hidden">
-                                    <div className="flex-[3] overflow-hidden bg-white rounded-3xl shadow-sm border border-slate-200">
+                                <div className="w-[380px] lg:w-[420px] xl:w-[460px] flex flex-col gap-4 min-h-0 overflow-hidden shrink-0">
+                                    <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white rounded-3xl shadow-sm border border-slate-200">
                                         <OrderPanel cart={cart} onRemove={removeFromCart} onUpdateQty={updateCartQty} onManualEntry={() => speak("Pedido manual iniciado")} />
                                     </div>
-                                    <div className="flex-[1] shrink-0 bg-white rounded-3xl shadow-sm border border-slate-200 p-2">
+                                    <div className="shrink-0 bg-white rounded-3xl shadow-sm border border-slate-200 p-2">
                                         <PaymentMethods onPayment={handlePayment} />
                                     </div>
                                 </div>
@@ -1719,15 +1728,38 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                             </div>
                         )}
 
-                        {/* Botón Flotante para Micrófono (Reemplaza al del ActionPanel) */}
-                        <div className="absolute bottom-8 left-8 flex flex-col gap-4 z-50">
-                             <button
-                                onClick={() => { if (isListening) stopListening(); else startListening(); }}
-                                className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : (aiMode === 'asistente' ? 'bg-purple-600 hover:bg-purple-700 shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'bg-[#1f5f36] hover:bg-[#2a7a48]')} hover:scale-110 active:scale-95`}
-                             >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                             </button>
-                        </div>
+                        {/* Botón Flotante para Micrófono - SOLO VISIBLE EN MODO PEDIDOS */}
+                        {activeTab === 'pedidos' && (
+                            <div className="fixed bottom-14 right-6 lg:right-8 z-[999] pointer-events-auto">
+                                <button
+                                    onClick={() => { if (isListening) stopListening(); else startListening(); }}
+                                    title={isListening ? "Detener dictado de voz" : (aiMode === 'asistente' ? "Hablar con Asistente IA" : "Dictar pedido por voz")}
+                                    className={cn(
+                                        "group flex items-center gap-3 px-5 py-3.5 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.5)] transition-all duration-300 hover:scale-105 active:scale-95 border-2 cursor-pointer",
+                                        isListening 
+                                            ? "bg-red-500 hover:bg-red-600 border-white text-white animate-pulse shadow-[0_0_30px_rgba(239,68,68,0.9)] ring-4 ring-red-400/50" 
+                                            : (aiMode === 'asistente' 
+                                                ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 border-purple-300/60 text-white shadow-[0_0_25px_rgba(168,85,247,0.6)]" 
+                                                : "bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-700 hover:from-emerald-500 hover:to-teal-600 border-emerald-300/60 text-white shadow-[0_10px_30px_rgba(16,185,129,0.5)]")
+                                    )}
+                                >
+                                    <div className={cn(
+                                        "w-11 h-11 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 shadow-inner",
+                                        isListening ? "bg-white text-red-600" : "bg-white/20 text-white"
+                                    )}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+                                    </div>
+                                    <div className="flex flex-col text-left pr-2">
+                                        <span className="text-[10px] font-black uppercase tracking-wider opacity-90 leading-tight">
+                                            {isListening ? "Escuchando voz..." : (aiMode === 'asistente' ? "Asistente IA" : "Voz Inteligente")}
+                                        </span>
+                                        <span className="text-sm font-black uppercase tracking-tight leading-none">
+                                            {isListening ? "¡Habla ahora!" : (aiMode === 'asistente' ? "Preguntar" : "Dictar Pedido")}
+                                        </span>
+                                    </div>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
@@ -1839,15 +1871,15 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         </button>
                     </div>
 
-                    {/* Contenido Principal */}
-                    <div style={{ flex: 1, overflowY: 'auto', padding: '8px', paddingBottom: '80px', touchAction: 'pan-y', WebkitOverflowScrolling: 'touch' }}>
+                    {/* Contenido Principal Móvil */}
+                    <div className="flex-1 overflow-y-auto p-2 pb-24 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
                         {activeTab === 'pedidos' && (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', position: 'relative' }}>
+                            <div className="flex flex-col gap-3 relative">
                                 {/* VISOR DE COINCIDENCIAS DE VOZ */}
                                 {voiceMatches.length > 0 && (
                                     <div className="bg-orange-50 border-2 border-orange-400 p-3 rounded-2xl shadow-lg flex flex-col gap-2 animate-in slide-in-from-top-4">
                                         <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-black text-orange-700 uppercase tracking-widest ">Encontrado por Voz:</span>
+                                            <span className="text-[10px] font-black text-orange-700 uppercase tracking-widest">Encontrado por Voz:</span>
                                             <button onClick={() => setVoiceMatches([])} className="text-orange-900 bg-orange-200 p-1 rounded-full"><X className="w-3 h-3" /></button>
                                         </div>
                                         <div className="flex flex-col gap-1">
@@ -1861,86 +1893,152 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                     </div>
                                 )}
 
-                                <OrderPanel cart={cart} onRemove={removeFromCart} onUpdateQty={updateCartQty} onManualEntry={() => speak("Pedido manual iniciado")} />
+                                {/* ESTADO DEL CARRITO / TICKET */}
+                                {cart.length === 0 ? (
+                                    <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center py-10 mt-2">
+                                        <div className="w-16 h-16 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mb-3 shadow-inner">
+                                            <Store className="w-8 h-8" />
+                                        </div>
+                                        <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight">Ticket Listo para Vender</h3>
+                                        <p className="text-xs text-slate-500 font-medium max-w-xs mt-1 mb-5">
+                                            Presiona el <strong>micrófono naranja flotante</strong> para dictar tu pedido o añade productos desde el inventario.
+                                        </p>
+                                        <button
+                                            onClick={() => setActiveTab('inventario')}
+                                            className="px-5 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl shadow-md flex items-center gap-2 active:scale-95 transition-all"
+                                        >
+                                            <Database className="w-4 h-4" />
+                                            Explorar Inventario y Categorías
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                                            <OrderPanel cart={cart} onRemove={removeFromCart} onUpdateQty={updateCartQty} onManualEntry={() => speak("Pedido manual iniciado")} />
+                                        </div>
 
-                                <div className="h-16 mb-2">
-                                    <PaymentMethods onPayment={handlePayment} />
-                                </div>
+                                        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-3">
+                                            <PaymentMethods onPayment={handlePayment} />
+                                        </div>
 
-                                {/* VISOR DE STOCK EN TIEMPO REAL */}
-                                <div className="border-t-2 border-slate-300 pt-3 flex-1 min-h-[300px]">
-                                    <InventoryPanel
-                                        inventory={inventory}
-                                        cart={cart}
-                                        onAddToCart={addItemsToCart}
-                                        searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)}
-                                    />
-                                </div>
+                                        <button
+                                            onClick={() => setActiveTab('inventario')}
+                                            className="py-3 px-4 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-2xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
+                                        >
+                                            <Plus className="w-4 h-4" /> Agregar más productos desde Inventario
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         )}
 
                         {activeTab === 'inventario' && (
-                            <div className="flex-1 min-h-[500px] flex flex-col">
+                            <div className="flex-1 min-h-[500px] flex flex-col relative pb-16">
                                 <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
+
+                                {/* Barra flotante rápida para volver al Ticket si hay productos */}
+                                {cart.length > 0 && (
+                                    <div className="fixed bottom-24 left-3 right-24 z-40 animate-in slide-in-from-bottom-2">
+                                        <button
+                                            onClick={() => setActiveTab('pedidos')}
+                                            className="w-full bg-slate-900/95 text-white p-3 rounded-2xl shadow-2xl border-2 border-emerald-400 flex items-center justify-between backdrop-blur-md active:scale-98 transition-all"
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white font-black text-xs flex items-center justify-center">
+                                                    {cart.length}
+                                                </span>
+                                                <span className="text-xs font-black uppercase tracking-wide">Ver Ticket</span>
+                                            </div>
+                                            <span className="text-sm font-mono font-black text-emerald-400">
+                                                S/ {cart.reduce((s, i) => s + (i.subtotal || 0), 0).toFixed(2)} →
+                                            </span>
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>
 
-                    {/* Nav bar FIJA en la parte inferior */}
-                    <nav style={{
-                        position: 'fixed',
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        backgroundColor: '#0f172a',
-                        borderTop: '2px solid #334155',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        height: '75px',
-                        padding: '0 8px',
-                        zIndex: 9999
-                    }}>
-                        <button onClick={() => setActiveTab('pedidos')} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', color: activeTab === 'pedidos' ? '#f97316' : '#94a3b8', background: 'none', border: 'none' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                            <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Pedidos</span>
-                        </button>
-
-                        <button onClick={() => setActiveTab('inventario')} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', color: activeTab === 'inventario' ? '#f97316' : '#94a3b8', background: 'none', border: 'none' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                            <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Inventario</span>
-                        </button>
-
-                        {/* 📷 BOTÓN CÁMARAS - Acceso directo a Vigilancia */}
-                        <button
-                            onClick={() => setShowSecurityPanel(true)}
-                            style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '2px', color: '#f43f5e', background: 'none', border: 'none', cursor: 'pointer' }}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.361a1 1 0 01-1.447.894L15 14M4 8a2 2 0 00-2 2v4a2 2 0 002 2h8a2 2 0 002-2v-4a2 2 0 00-2-2H4z" />
-                            </svg>
-                            <span style={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Cámaras</span>
-                        </button>
+                    {/* BOTÓN FLOTANTE GIGANTE DE MICRÓFONO (FAB MÓVIL) */}
+                    <div className="fixed bottom-20 right-4 z-[9999] flex flex-col items-center">
+                        {/* Badge indicador flotante */}
+                        <div className={cn(
+                            "mb-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl border pointer-events-none transition-all whitespace-nowrap",
+                            isListening 
+                                ? "bg-red-600 text-white border-white animate-pulse" 
+                                : "bg-slate-900/95 text-amber-300 border-amber-400/50 shadow-black/40"
+                        )}>
+                            {isListening ? "🔴 ¡HABLA AHORA!" : "🎤 TOCAR PARA HABLAR"}
+                        </div>
 
                         <button
                             onClick={() => { if (isListening) stopListening(); else startListening(); }}
-                            style={{
-                                flex: 1,
-                                height: '100%',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '2px',
-                                background: isListening ? '#ef4444' : '#f97316',
-                                border: 'none',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                zIndex: 10000
-                            }}
+                            aria-label="Dictar pedido por voz"
+                            title={isListening ? "Detener dictado" : "Tocar para hablar por voz"}
+                            className={cn(
+                                "w-[72px] h-[72px] rounded-full flex items-center justify-center border-4 border-white shadow-[0_12px_35px_rgba(249,115,22,0.7)] transition-all duration-300 active:scale-90 cursor-pointer",
+                                isListening
+                                    ? "bg-gradient-to-tr from-red-600 to-rose-600 ring-8 ring-red-400/60 animate-bounce text-white shadow-[0_0_40px_rgba(239,68,68,0.9)]"
+                                    : "bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 ring-4 ring-orange-400/50 animate-pulse text-white hover:scale-105"
+                            )}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#ffffff" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-                            <span style={{ color: '#ffffff', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase' }}>Dictar</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.8}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Nav bar FIJA en la parte inferior */}
+                    <nav className="fixed bottom-0 left-0 right-0 bg-[#0f172a] border-t-2 border-[#334155] flex justify-around items-center h-[70px] px-2 z-[9998]">
+                        <button 
+                            onClick={() => setActiveTab('pedidos')} 
+                            className={cn(
+                                "flex-1 h-full flex flex-col items-center justify-center gap-1 transition-colors relative",
+                                activeTab === 'pedidos' ? "text-[#f97316]" : "text-slate-400 hover:text-white"
+                            )}
+                        >
+                            <div className="relative">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                                {cart.length > 0 && (
+                                    <span className="absolute -top-1.5 -right-2 bg-emerald-500 text-white rounded-full w-4 h-4 text-[9px] font-black flex items-center justify-center border border-[#0f172a]">
+                                        {cart.length}
+                                    </span>
+                                )}
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-tight">Caja</span>
+                        </button>
+
+                        <button 
+                            onClick={() => setActiveTab('inventario')} 
+                            className={cn(
+                                "flex-1 h-full flex flex-col items-center justify-center gap-1 transition-colors",
+                                activeTab === 'inventario' ? "text-[#f97316]" : "text-slate-400 hover:text-white"
+                            )}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                            <span className="text-[10px] font-black uppercase tracking-tight">Inventario</span>
+                        </button>
+
+                        {/* 📷 BOTÓN CÁMARAS */}
+                        <button
+                            onClick={() => setShowSecurityPanel(true)}
+                            className="flex-1 h-full flex flex-col items-center justify-center gap-1 text-[#f43f5e] hover:text-rose-400 transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.361a1 1 0 01-1.447.894L15 14M4 8a2 2 0 00-2 2v4a2 2 0 002 2h8a2 2 0 002-2v-4a2 2 0 00-2-2H4z" />
+                            </svg>
+                            <span className="text-[10px] font-black uppercase tracking-tight">Cámaras</span>
+                        </button>
+
+                        {/* ⚙️ MENÚ / HERRAMIENTAS */}
+                        <button
+                            onClick={() => setIsSidebarOpen(true)}
+                            className="flex-1 h-full flex flex-col items-center justify-center gap-1 text-slate-400 hover:text-white transition-colors"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                            <span className="text-[10px] font-black uppercase tracking-tight">Más</span>
                         </button>
                     </nav>
                 </div>
@@ -1951,12 +2049,12 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             {/* Voice Status & Transcript Overlay */}
             {isListening && (
                 <div className={cn(
-                    "fixed bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-3 rounded-full flex items-center gap-3 z-50 animate-pulse border-2 shadow-xl",
-                    aiMode === 'asistente' ? "bg-purple-900/90 border-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]" : "bg-black/80 border-red-500"
+                    "fixed top-14 lg:bottom-24 left-1/2 -translate-x-1/2 text-white px-5 py-2.5 rounded-full flex items-center gap-3 z-[10000] animate-pulse border-2 shadow-2xl max-w-[90vw] truncate",
+                    aiMode === 'asistente' ? "bg-purple-900/95 border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.7)]" : "bg-slate-900/95 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.7)]"
                 )}>
-                    <div className={cn("w-3 h-3 rounded-full shadow-inner", aiMode === 'asistente' ? "bg-purple-400" : "bg-red-500")}></div>
-                    <span className="font-medium text-lg">
-                        {interimTranscript || (aiMode === 'asistente' ? "Asistente Escuchando..." : "Escuchando...")}
+                    <div className={cn("w-3 h-3 rounded-full shrink-0 shadow-inner", aiMode === 'asistente' ? "bg-purple-400" : "bg-red-500")}></div>
+                    <span className="font-bold text-sm lg:text-lg truncate">
+                        {interimTranscript || (aiMode === 'asistente' ? "Asistente Escuchando..." : "Escuchando voz...")}
                     </span>
                 </div>
             )}

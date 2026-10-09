@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useMemo } from "react";
 import { ChevronDown, Plus, Search, X, Package, Calendar, Tag, Share2, Eye, ExternalLink, Info } from "lucide-react";
 import { formatStock } from "@/lib/format-utils";
 import { cn } from "@/lib/utils";
@@ -18,12 +18,37 @@ export function InventoryPanel({
 }: InventoryPanelProps) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [localSearch, setLocalSearch] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const [showPreview, setShowPreview] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
     const activeSearch = (localSearch || searchQuery).toLowerCase().trim();
     const withStock = inventory.filter(item => item.stock > 0).length;
     const withoutStock = inventory.filter(item => item.stock <= 0).length;
+
+    // Categorías únicas
+    const categories = useMemo(() => {
+        const set = new Set<string>();
+        (inventory || []).forEach(item => {
+            const cat = (item.category || item.categoria || '').trim();
+            if (cat) set.add(cat);
+        });
+        return Array.from(set).sort();
+    }, [inventory]);
+
+    // Filtrar inventario por categoría y búsqueda
+    const filteredInventory = useMemo(() => {
+        return (inventory || []).filter(item => {
+            if (selectedCategory) {
+                const itemCat = (item.category || item.categoria || '').trim().toLowerCase();
+                if (itemCat !== selectedCategory.toLowerCase()) return false;
+            }
+            if (!activeSearch) return true;
+            const nameMatch = (item?.name?.toLowerCase() || "").includes(activeSearch);
+            const codeMatch = (item?.code?.toString().toLowerCase() || "").includes(activeSearch);
+            return nameMatch || codeMatch;
+        });
+    }, [inventory, selectedCategory, activeSearch]);
 
     const getAvailableStock = (item: any) => {
         const inCart = (cart || []).filter(c => String(c.code) === String(item.code)).reduce((sum, c) => sum + Number(c.qty), 0);
@@ -56,11 +81,11 @@ export function InventoryPanel({
 
     return (
         <div className={cn(
-            "flex flex-col min-h-0 bg-slate-50/50 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border-2 border-white/50 transition-all duration-500",
+            "flex flex-col h-full min-h-0 bg-slate-50/50 backdrop-blur-xl rounded-3xl overflow-hidden shadow-2xl border-2 border-white/50 transition-all duration-500",
             isCollapsed ? 'max-h-[60px]' : 'flex-1'
         )}>
             {/* Header with Premium Gradient */}
-            <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 px-5 py-4 flex flex-col gap-3 relative">
+            <div className="bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 px-5 py-4 flex flex-col gap-3 relative shrink-0">
                 <div className="flex justify-between items-center">
                     <div
                         className="flex flex-col cursor-pointer group"
@@ -84,30 +109,63 @@ export function InventoryPanel({
                 </div>
 
                 {!isCollapsed && (
-                    <div className="flex gap-3 mt-1">
-                        <div className="relative group flex-1">
-                            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-white transition-colors" />
-                            <input
-                                type="text"
-                                value={localSearch}
-                                onChange={(e) => setLocalSearch(e.target.value)}
-                                placeholder="¿Qué buscas hoy?"
-                                className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 pl-10 pr-10 py-3 rounded-2xl outline-none focus:bg-white/20 focus:border-white/40 transition-all text-sm font-bold shadow-inner"
-                            />
-                            {localSearch && (
-                                <button onClick={() => setLocalSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/50 hover:text-white">
-                                    <X className="w-5 h-5" />
-                                </button>
-                            )}
+                    <>
+                        <div className="flex gap-3 mt-1">
+                            <div className="relative group flex-1">
+                                <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-white transition-colors" />
+                                <input
+                                    type="text"
+                                    value={localSearch}
+                                    onChange={(e) => setLocalSearch(e.target.value)}
+                                    placeholder="¿Qué buscas hoy?"
+                                    className="w-full bg-white/10 border border-white/20 text-white placeholder:text-white/40 pl-10 pr-10 py-3 rounded-2xl outline-none focus:bg-white/20 focus:border-white/40 transition-all text-sm font-bold shadow-inner"
+                                />
+                                {localSearch && (
+                                    <button onClick={() => setLocalSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-white/50 hover:text-white">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                )}
+                            </div>
+                            <button 
+                                onClick={() => setShowPreview(true)}
+                                className="bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg transition-transform active:scale-95 whitespace-nowrap"
+                            >
+                                <Share2 className="w-4 h-4" />
+                                <span className="hidden sm:inline">Compartir</span>
+                            </button>
                         </div>
-                        <button 
-                            onClick={() => setShowPreview(true)}
-                            className="bg-yellow-500 hover:bg-yellow-400 text-black px-4 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 shadow-lg transition-transform active:scale-95 whitespace-nowrap"
-                        >
-                            <Share2 className="w-4 h-4" />
-                            <span className="hidden sm:inline">Compartir</span>
-                        </button>
-                    </div>
+
+                        {/* Barra de Categorías Horizontal */}
+                        {categories.length > 0 && (
+                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 hide-scrollbar -mx-2 px-2">
+                                <button
+                                    onClick={() => setSelectedCategory(null)}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all shrink-0 cursor-pointer",
+                                        selectedCategory === null
+                                            ? "bg-amber-400 text-slate-900 shadow-md scale-105"
+                                            : "bg-white/15 text-white/80 hover:bg-white/25 hover:text-white"
+                                    )}
+                                >
+                                    Todos ({inventory.length})
+                                </button>
+                                {categories.map((cat) => (
+                                    <button
+                                        key={cat}
+                                        onClick={() => setSelectedCategory(selectedCategory === cat ? null : cat)}
+                                        className={cn(
+                                            "px-3 py-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider whitespace-nowrap transition-all shrink-0 cursor-pointer",
+                                            selectedCategory?.toLowerCase() === cat.toLowerCase()
+                                                ? "bg-amber-400 text-slate-900 shadow-md scale-105"
+                                                : "bg-white/15 text-white/80 hover:bg-white/25 hover:text-white"
+                                        )}
+                                    >
+                                        {cat}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </>
                 )}
             </div>
 
@@ -119,26 +177,25 @@ export function InventoryPanel({
                             <p className="font-black text-slate-700 text-base">Cargando inventario de productos...</p>
                             <p className="text-xs text-slate-500 mt-1">Sincronizando productos y precios en tiempo real</p>
                         </div>
-                    ) : (inventory || []).filter(item => {
-                            if (!activeSearch) return true;
-                            const nameMatch = (item?.name?.toLowerCase() || "").includes(activeSearch);
-                            const codeMatch = (item?.code?.toString().toLowerCase() || "").includes(activeSearch);
-                            return nameMatch || codeMatch;
-                        }).length === 0 ? (
+                    ) : filteredInventory.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 px-4 text-center text-slate-400">
                             <Search className="w-12 h-12 mb-3 text-slate-400" />
                             <p className="font-black text-slate-700 text-base">No se encontraron productos</p>
-                            <p className="text-xs text-slate-500 mt-1">Intenta con otro nombre o código de barra</p>
+                            <p className="text-xs text-slate-500 mt-1">
+                                {selectedCategory ? `No hay productos en la categoría "${selectedCategory}"` : "Intenta con otro nombre o código de barra"}
+                            </p>
+                            {selectedCategory && (
+                                <button
+                                    onClick={() => setSelectedCategory(null)}
+                                    className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider"
+                                >
+                                    Ver todas las categorías
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                        {(inventory || [])
-                            .filter(item => {
-                                if (!activeSearch) return true;
-                                const nameMatch = (item?.name?.toLowerCase() || "").includes(activeSearch);
-                                const codeMatch = (item?.code?.toString().toLowerCase() || "").includes(activeSearch);
-                                return nameMatch || codeMatch;
-                            })
+                        {filteredInventory
                             .map((item, idx) => {
                                 const availableStock = getAvailableStock(item);
                                 const display = formatStock(availableStock, item.unidades_base, item.name, item.um, item.sale_type);

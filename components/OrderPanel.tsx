@@ -22,10 +22,10 @@ export function OrderPanel({
     const total = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
     return (
-        <div className={`flex flex-col bg-white rounded-3xl overflow-hidden shadow-xl border border-slate-200 transition-all duration-300 ${isExpanded ? 'h-full' : 'h-[250px]'}`}>
+        <div className={`flex flex-col bg-white rounded-3xl overflow-hidden shadow-xl border border-slate-200 transition-all duration-300 h-full min-h-0`}>
             {/* Panel Header - Ticket Style */}
             <div
-                className="bg-slate-900 px-6 py-4 flex justify-between items-center cursor-pointer active:bg-slate-800 transition-colors"
+                className="bg-slate-900 px-6 py-4 flex justify-between items-center cursor-pointer active:bg-slate-800 transition-colors shrink-0"
                 onClick={() => setIsExpanded(!isExpanded)}
             >
                 <div className="flex items-center gap-3">
@@ -119,9 +119,9 @@ export function OrderPanel({
             </div>
 
             {/* Total Footer - Big and Bold */}
-            <div className="bg-emerald-500 text-white p-5 flex justify-between items-center shadow-[0_-10px_20px_-10px_rgba(16,185,129,0.3)] z-10">
-                <span className="text-sm font-black uppercase tracking-[0.2em] opacity-90">Total a Cobrar</span>
-                <span className="text-4xl font-mono font-black tracking-tighter">S/ {total.toFixed(2)}</span>
+            <div className="bg-emerald-500 text-white p-4 lg:p-5 flex justify-between items-center shadow-[0_-10px_20px_-10px_rgba(16,185,129,0.3)] z-10 shrink-0">
+                <span className="text-xs lg:text-sm font-black uppercase tracking-[0.2em] opacity-90">Total a Cobrar</span>
+                <span className="text-3xl lg:text-4xl font-mono font-black tracking-tighter">S/ {total.toFixed(2)}</span>
             </div>
         </div>
     );
