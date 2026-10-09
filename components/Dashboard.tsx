@@ -356,7 +356,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         });
     };
 
-    const { isListening, transcript, interimTranscript, startListening, stopListening } = useVoiceInput();
+    const { isListening, transcript, interimTranscript, voiceError, clearVoiceError, startListening, stopListening } = useVoiceInput();
 
     const lastProcessedLength = useRef(0);
     const isProcessingChunk = useRef(false);
@@ -1732,7 +1732,11 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         {activeTab === 'pedidos' && (
                             <div className="fixed bottom-14 right-6 lg:right-8 z-[999] pointer-events-auto">
                                 <button
-                                    onClick={() => { if (isListening) stopListening(); else startListening(); }}
+                                    onClick={() => { 
+                                        if (voiceError) clearVoiceError();
+                                        if (isListening) stopListening(); 
+                                        else startListening(); 
+                                    }}
                                     title={isListening ? "Detener dictado de voz" : (aiMode === 'asistente' ? "Hablar con Asistente IA" : "Dictar pedido por voz")}
                                     className={cn(
                                         "group flex items-center gap-3 px-5 py-3.5 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.5)] transition-all duration-300 hover:scale-105 active:scale-95 border-2 cursor-pointer",
@@ -1966,20 +1970,30 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                             "mb-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl border pointer-events-none transition-all whitespace-nowrap",
                             isListening 
                                 ? "bg-red-600 text-white border-white animate-pulse" 
-                                : "bg-slate-900/95 text-amber-300 border-amber-400/50 shadow-black/40"
+                                : voiceError
+                                    ? "bg-amber-600 text-white border-amber-300 animate-bounce"
+                                    : "bg-slate-900/95 text-amber-300 border-amber-400/50 shadow-black/40"
                         )}>
-                            {isListening ? "🔴 ¡HABLA AHORA!" : "🎤 TOCAR PARA HABLAR"}
+                            {isListening ? "🔴 ¡HABLA AHORA!" : voiceError ? "⚠️ REVISAR MICRÓFONO" : "🎤 TOCAR PARA HABLAR"}
                         </div>
 
                         <button
-                            onClick={() => { if (isListening) stopListening(); else startListening(); }}
+                            onClick={() => { 
+                                if (voiceError) {
+                                    clearVoiceError();
+                                }
+                                if (isListening) stopListening(); 
+                                else startListening(); 
+                            }}
                             aria-label="Dictar pedido por voz"
                             title={isListening ? "Detener dictado" : "Tocar para hablar por voz"}
                             className={cn(
                                 "w-[72px] h-[72px] rounded-full flex items-center justify-center border-4 border-white shadow-[0_12px_35px_rgba(249,115,22,0.7)] transition-all duration-300 active:scale-90 cursor-pointer",
                                 isListening
                                     ? "bg-gradient-to-tr from-red-600 to-rose-600 ring-8 ring-red-400/60 animate-bounce text-white shadow-[0_0_40px_rgba(239,68,68,0.9)]"
-                                    : "bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 ring-4 ring-orange-400/50 animate-pulse text-white hover:scale-105"
+                                    : voiceError
+                                        ? "bg-gradient-to-tr from-amber-600 to-red-600 ring-4 ring-amber-400 text-white hover:scale-105"
+                                        : "bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 ring-4 ring-orange-400/50 animate-pulse text-white hover:scale-105"
                             )}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.8}>
@@ -2056,6 +2070,57 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     <span className="font-bold text-sm lg:text-lg truncate">
                         {interimTranscript || (aiMode === 'asistente' ? "Asistente Escuchando..." : "Escuchando voz...")}
                     </span>
+                </div>
+            )}
+
+            {/* Modal / Toast de Ayuda si el Micrófono está bloqueado o da error */}
+            {voiceError && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[11000] flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border-2 border-amber-500/80 rounded-3xl p-6 max-w-md w-full shadow-2xl text-white">
+                        <div className="flex items-start gap-4 mb-4">
+                            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-2xl shrink-0">
+                                🎤⚠️
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-amber-400 leading-tight">
+                                    Micrófono no conectado o bloqueado
+                                </h3>
+                                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                                    {voiceError}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-800/80 rounded-2xl p-4 border border-slate-700/80 text-xs text-slate-300 space-y-2 mb-5">
+                            <p className="font-bold text-amber-300 flex items-center gap-1.5">
+                                💡 Pasos para activarlo en tu celular:
+                            </p>
+                            <ol className="list-decimal list-inside space-y-1.5 pl-1 text-slate-300">
+                                <li>Toca el icono de <strong>candado 🔒</strong> o <strong>ajustes</strong> en la barra de direcciones de tu navegador (al lado de <em>caseritasmart.cloud</em>).</li>
+                                <li>Entra a <strong>"Permisos"</strong> o <strong>"Micrófono"</strong>.</li>
+                                <li>Cámbialo a <strong>"Permitir"</strong>.</li>
+                                <li>Asegúrate de que ninguna otra app (WhatsApp, llamada) esté usando el micrófono.</li>
+                            </ol>
+                        </div>
+
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => {
+                                    clearVoiceError();
+                                    startListening();
+                                }}
+                                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-orange-500/30 flex items-center justify-center gap-2 active:scale-95 transition-all text-sm"
+                            >
+                                🔄 Reintentar Micrófono
+                            </button>
+                            <button
+                                onClick={clearVoiceError}
+                                className="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-3 px-4 rounded-xl border border-slate-700 active:scale-95 transition-all text-sm"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 
