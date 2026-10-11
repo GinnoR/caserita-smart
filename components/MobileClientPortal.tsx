@@ -697,9 +697,9 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
     }
 
     return (
-        <div className="flex flex-col min-h-screen bg-slate-100 max-w-md mx-auto shadow-2xl relative">
+        <div className="flex flex-col h-[100dvh] max-h-[100dvh] bg-slate-100 max-w-md mx-auto shadow-2xl relative overflow-hidden">
             {/* Encabezado Móvil Oficial */}
-            <header className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 shadow-xl sticky top-0 z-30 flex flex-col gap-2 border-b border-white/10">
+            <header className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 shadow-xl shrink-0 z-30 flex flex-col gap-2 border-b border-white/10">
                 <div className="flex items-center gap-3 w-full">
                     <button
                         onClick={() => (window.history.length > 1 ? router.back() : router.push('/'))}
@@ -731,12 +731,12 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
             </header>
 
             {/* Zona de Instrucciones / Promociones */}
-            <div className="p-4 bg-orange-50 border-b border-orange-100">
+            <div className="p-3 bg-orange-50 border-b border-orange-100 shrink-0">
                 <div className="flex items-start gap-3">
                     <Info className="w-5 h-5 text-orange-500 flex-shrink-0 mt-0.5" />
                     <div>
-                        <h3 className="font-bold text-slate-800 text-sm">¿Cómo hacer tu pedido?</h3>
-                        <p className="text-xs text-slate-600 mt-1">
+                        <h3 className="font-bold text-slate-800 text-xs">¿Cómo hacer tu pedido?</h3>
+                        <p className="text-[11px] text-slate-600 mt-0.5">
                             Presiona el botón de micrófono y dile a tu casero lo que necesitas. <br />
                             Ejemplo: <i>"Caserito, dame 1 kilo de azúcar rubia y 2 atunes chico"</i>
                         </p>
@@ -745,7 +745,7 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
             </div>
 
             {/* Área de Visualización Principal (Catálogo o Análisis en Vivo) */}
-            <main className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-slate-100">
+            <main className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 bg-slate-100 overscroll-contain pb-32" style={{ WebkitOverflowScrolling: 'touch' }}>
                 {isListening ? (
                     <div className="flex flex-col items-center justify-center p-8 bg-white rounded-3xl shadow-lg border-2 border-red-100 animate-in zoom-in duration-300">
                         <div className="relative mb-6">

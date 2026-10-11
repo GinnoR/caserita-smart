@@ -253,9 +253,9 @@ export function AuthScreen({ initialMode = 'login' }: { initialMode?: 'login' | 
             </div>
 
             {/* ── COLUMNA DERECHA — Formulario Limpio ── */}
-            <div className="w-full md:w-1/2 bg-white flex flex-col items-center justify-center py-6 px-5 sm:px-10 lg:px-20 min-h-[calc(100vh-2rem)] md:min-h-screen relative">
+            <div className="w-full md:w-1/2 bg-white flex flex-col items-center justify-start md:justify-center py-8 px-5 sm:px-10 lg:px-20 min-h-screen relative overflow-y-auto">
                 
-                <div className="w-full max-w-md mx-auto my-auto flex flex-col justify-center">
+                <div className="w-full max-w-md mx-auto my-auto md:my-auto my-4 flex flex-col justify-center pb-12">
                     {/* Header para móviles */}
                     <div className="md:hidden flex flex-col items-center mb-4 mt-2">
                         <div className="bg-emerald-500 w-12 h-12 rounded-2xl flex items-center justify-center shadow-md mb-2">

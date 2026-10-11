@@ -1586,7 +1586,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     return (
         <main className={cn(
             "flex flex-1 flex-col min-h-0",
-            isMobile ? "min-h-screen bg-slate-200 pb-20 relative" : "h-full max-h-full overflow-hidden bg-slate-200"
+            isMobile ? "h-[100dvh] max-h-[100dvh] overflow-hidden bg-slate-200 relative" : "h-full max-h-full overflow-hidden bg-slate-200"
         )}>
             <Header onLogout={onLogout} aiMode={aiMode} onModeChange={handleModeChange} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} onOpenFAQ={() => setShowFAQ(true)} />
 
@@ -1773,7 +1773,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
             {/* ===== MOBILE LAYOUT ===== */}
             {isMobile && (
-                <div style={{ display: 'flex', flex: 1, position: 'relative', minHeight: 0 }}>
+                <div className="flex flex-1 flex-col min-h-0 relative overflow-hidden pb-[70px]">
                     {/* DRAWER / SLIDE-OVER MENU MÓVIL MODERNO */}
                     {isSidebarOpen && (
                         <div 
@@ -1917,8 +1917,8 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                     )}
 
                     {/* Contenido Principal Móvil */}
-                    <div className="flex-1 overflow-y-auto p-2 pb-32 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
-                        {activeTab === 'pedidos' && (
+                    {activeTab === 'pedidos' ? (
+                        <div className="flex-1 overflow-y-auto p-2 pb-24 overscroll-contain" style={{ WebkitOverflowScrolling: 'touch' }}>
                             <div className="flex flex-col gap-3 relative">
                                 {/* VISOR DE COINCIDENCIAS DE VOZ */}
                                 {voiceMatches.length > 0 && (
@@ -1975,34 +1975,32 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                     </>
                                 )}
                             </div>
-                        )}
+                        </div>
+                    ) : (
+                        <div className="flex-1 h-full min-h-0 flex flex-col relative overflow-hidden pb-14">
+                            <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
 
-                        {activeTab === 'inventario' && (
-                            <div className="flex-1 min-h-[500px] flex flex-col relative pb-16">
-                                <InventoryPanel inventory={inventory} cart={cart} onAddToCart={addItemsToCart} searchQuery={interimTranscript || transcript.substring(lastProcessedLength.current)} />
-
-                                {/* Barra flotante rápida para volver al Ticket si hay productos */}
-                                {cart.length > 0 && (
-                                    <div className="fixed bottom-24 left-3 right-24 z-40 animate-in slide-in-from-bottom-2">
-                                        <button
-                                            onClick={() => setActiveTab('pedidos')}
-                                            className="w-full bg-slate-900/95 text-white p-3 rounded-2xl shadow-2xl border-2 border-emerald-400 flex items-center justify-between backdrop-blur-md active:scale-98 transition-all"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <span className="w-6 h-6 rounded-full bg-emerald-500 text-white font-black text-xs flex items-center justify-center">
-                                                    {cart.length}
-                                                </span>
-                                                <span className="text-xs font-black uppercase tracking-wide">Ver Ticket</span>
-                                            </div>
-                                            <span className="text-sm font-mono font-black text-emerald-400">
-                                                S/ {cart.reduce((s, i) => s + (i.subtotal || 0), 0).toFixed(2)} →
+                            {/* Barra flotante rápida para volver al Ticket si hay productos */}
+                            {cart.length > 0 && (
+                                <div className="fixed bottom-24 left-3 right-24 z-40 animate-in slide-in-from-bottom-2">
+                                    <button
+                                        onClick={() => setActiveTab('pedidos')}
+                                        className="w-full bg-slate-900/95 text-white p-3 rounded-2xl shadow-2xl border-2 border-emerald-400 flex items-center justify-between backdrop-blur-md active:scale-98 transition-all"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className="w-6 h-6 rounded-full bg-emerald-500 text-white font-black text-xs flex items-center justify-center">
+                                                {cart.length}
                                             </span>
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
+                                            <span className="text-xs font-black uppercase tracking-wide">Ver Ticket</span>
+                                        </div>
+                                        <span className="text-sm font-mono font-black text-emerald-400">
+                                            S/ {cart.reduce((s, i) => s + (i.subtotal || 0), 0).toFixed(2)} →
+                                        </span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* BOTÓN FLOTANTE GIGANTE DE MICRÓFONO (FAB MÓVIL) */}
                     <div className="fixed bottom-20 right-4 z-[9999] flex flex-col items-center">
