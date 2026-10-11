@@ -1584,7 +1584,10 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
     }
 
     return (
-        <main style={isMobile ? { height: '100dvh', overflow: 'auto', backgroundColor: '#e2e8f0', display: 'flex', flexDirection: 'column' } : { height: '100%', maxHeight: '100%', overflow: 'hidden' }} className={isMobile ? '' : 'flex flex-1 flex-col h-full max-h-full overflow-hidden bg-slate-200 min-h-0'}>
+        <main className={cn(
+            "flex flex-1 flex-col min-h-0",
+            isMobile ? "min-h-screen bg-slate-200 pb-20 relative" : "h-full max-h-full overflow-hidden bg-slate-200"
+        )}>
             <Header onLogout={onLogout} aiMode={aiMode} onModeChange={handleModeChange} cajeroNombre={cajeroNombre} isOnline={isOnline} isSyncing={isSyncing} isSirenActive={isSirenActive} onTriggerPanic={triggerPanicAction} onOpenFAQ={() => setShowFAQ(true)} />
 
             {/* ONBOARDING GUIDE — only for new users */}
@@ -1771,112 +1774,150 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
             {/* ===== MOBILE LAYOUT ===== */}
             {isMobile && (
                 <div style={{ display: 'flex', flex: 1, position: 'relative', minHeight: 0 }}>
-                    {/* Botón sutil para abrir el menú cuando está oculto */}
-                    {!isSidebarOpen && (
-                        <button 
-                            onClick={() => setIsSidebarOpen(true)}
-                            className="absolute left-0 top-1/2 -translate-y-1/2 bg-[#0f172a] text-slate-300 p-1.5 py-4 rounded-r-xl shadow-2xl z-[40] border border-l-0 border-[#334155] opacity-80 hover:opacity-100 transition-opacity"
+                    {/* DRAWER / SLIDE-OVER MENU MÓVIL MODERNO */}
+                    {isSidebarOpen && (
+                        <div 
+                            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex animate-in fade-in duration-200"
+                            onClick={() => setIsSidebarOpen(false)}
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" /></svg>
-                        </button>
+                            <div 
+                                className="w-80 max-w-[85vw] bg-slate-900 h-full p-5 shadow-2xl flex flex-col border-r border-slate-700 overflow-y-auto animate-in slide-in-from-left duration-200"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="flex justify-between items-center pb-4 mb-4 border-b border-slate-800">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center font-black">
+                                            CS
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-white text-base leading-none">Menú Caserita</h3>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Herramientas Rápidas</p>
+                                        </div>
+                                    </div>
+                                    <button 
+                                        onClick={() => setIsSidebarOpen(false)}
+                                        className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-colors"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+
+                                <div className="flex flex-col gap-2 flex-1">
+                                    <button 
+                                        onClick={() => { setShowMaster(true); setIsSidebarOpen(false); }} 
+                                        className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-left transition-all active:scale-[0.98] border border-slate-700/50"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-green-500/20 text-green-400 flex items-center justify-center shrink-0">
+                                            <Database className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-white text-sm">Catálogo Maestro</p>
+                                            <p className="text-[10px] text-slate-400">Crear o editar productos</p>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { setShowBuyers(true); setIsSidebarOpen(false); }} 
+                                        className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-left transition-all active:scale-[0.98] border border-slate-700/50 relative"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center shrink-0">
+                                            <Store className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-black text-white text-sm">Buzón de Pedidos</p>
+                                            <p className="text-[10px] text-slate-400">Pedidos de clientes web</p>
+                                        </div>
+                                        {pendingOrders.filter(o => o.estado === 'pendiente').length > 0 && (
+                                            <span className="bg-red-500 text-white rounded-full px-2 py-0.5 text-xs font-black">
+                                                {pendingOrders.filter(o => o.estado === 'pendiente').length}
+                                            </span>
+                                        )}
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { setShowFiados(true); setIsSidebarOpen(false); }} 
+                                        className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-left transition-all active:scale-[0.98] border border-slate-700/50"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
+                                            <MoreHorizontal className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-white text-sm">Control de Fiados</p>
+                                            <p className="text-[10px] text-slate-400">Créditos y deudores</p>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { setShowProveedores(true); setIsSidebarOpen(false); }} 
+                                        className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-left transition-all active:scale-[0.98] border border-slate-700/50"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-400 flex items-center justify-center shrink-0">
+                                            <PieChart className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-white text-sm">Proveedores y Gastos</p>
+                                            <p className="text-[10px] text-slate-400">Compras y facturas</p>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { setShowReports(true); setIsSidebarOpen(false); }} 
+                                        className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-left transition-all active:scale-[0.98] border border-slate-700/50"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-yellow-500/20 text-yellow-400 flex items-center justify-center shrink-0">
+                                            <BarChart className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-white text-sm">Finanzas y Reportes</p>
+                                            <p className="text-[10px] text-slate-400">Caja diaria y utilidades</p>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { setShowScanner(true); setIsSidebarOpen(false); }} 
+                                        className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-left transition-all active:scale-[0.98] border border-slate-700/50"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
+                                            <QrCode className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-white text-sm">Escáner de Barras</p>
+                                            <p className="text-[10px] text-slate-400">Cámara rápida</p>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { setConfigTab('seguridad'); setShowConfig(true); setIsSidebarOpen(false); }} 
+                                        className="flex items-center gap-3 p-3 rounded-2xl bg-slate-800/60 hover:bg-slate-800 text-left transition-all active:scale-[0.98] border border-slate-700/50"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-slate-500/20 text-slate-300 flex items-center justify-center shrink-0">
+                                            <Settings className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-white text-sm">Ajustes del Sistema</p>
+                                            <p className="text-[10px] text-slate-400">Cuentas, QR y seguridad</p>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => { triggerPanicAction(); setIsSidebarOpen(false); }} 
+                                        className="flex items-center gap-3 p-3.5 rounded-2xl bg-red-950/60 hover:bg-red-900/80 text-left transition-all active:scale-[0.98] border border-red-500/40 mt-3"
+                                    >
+                                        <div className="w-10 h-10 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 animate-pulse">
+                                            <ShieldAlert className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <p className="font-black text-red-200 text-sm uppercase">Botón de Pánico</p>
+                                            <p className="text-[10px] text-red-300">Activar sirena y auxilio</p>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     )}
 
-                    {/* SIDEBAR (X-plore style) on the Left */}
-                    <div style={{
-                        width: isSidebarOpen ? '60px' : '0px',
-                        opacity: isSidebarOpen ? 1 : 0,
-                        pointerEvents: isSidebarOpen ? 'auto' : 'none',
-                        backgroundColor: '#0f172a',
-                        borderRight: isSidebarOpen ? '2px solid #334155' : 'none',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '16px',
-                        padding: isSidebarOpen ? '16px 0' : '0',
-                        zIndex: 40, // Debajo de los modales (z-50)
-                        overflowY: 'auto',
-                        overflowX: 'hidden',
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        bottom: 0,
-                        transition: 'all 0.2s ease-out',
-                        boxShadow: isSidebarOpen ? '4px 0 15px rgba(0,0,0,0.5)' : 'none'
-                    }}>
-                        {/* Botón para cerrar el menú */}
-                        {isSidebarOpen && (
-                            <button onClick={() => setIsSidebarOpen(false)} style={{ color: '#94a3b8', background: 'none', border: 'none', marginBottom: '-8px' }}>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                            </button>
-                        )}
-                        <button onClick={() => setShowConfig(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#94a3b8', background: 'none', border: 'none' }}>
-                            <Settings className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Config</span>
-                        </button>
-
-                        <button onClick={() => setShowScanner(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#60a5fa', background: 'none', border: 'none' }}>
-                            <QrCode className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Scan</span>
-                        </button>
-
-                        <button onClick={() => setShowMaster(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#4ade80', background: 'none', border: 'none' }}>
-                            <Database className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Catál</span>
-                        </button>
-
-                        <button onClick={() => setShowBuyers(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#fb923c', background: 'none', border: 'none', position: 'relative' }}>
-                            <Store className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Buzón</span>
-                            {pendingOrders.filter(o => o.estado === 'pendiente').length > 0 && (
-                                <span style={{ position: 'absolute', top: '-4px', right: '8px', backgroundColor: '#ef4444', color: 'white', borderRadius: '9999px', width: '14px', height: '14px', fontSize: '8px', fontWeight: 'black', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #0f172a' }}>
-                                    {pendingOrders.filter(o => o.estado === 'pendiente').length}
-                                </span>
-                            )}
-                        </button>
-
-                        <button onClick={() => setShowFiados(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#a78bfa', background: 'none', border: 'none' }}>
-                            <MoreHorizontal className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Créd</span>
-                        </button>
-
-                        <button onClick={() => setShowProveedores(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#38bdf8', background: 'none', border: 'none' }}>
-                            <PieChart className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Gastos</span>
-                        </button>
-
-                        <button onClick={() => { const message = encodeURIComponent("📢 *Caserita Smart* trae ofertas hoy:\n\n" + inventory.slice(0, 5).map(i => `✅ ${i.name} a S/ ${i.price.toFixed(2)}`).join("\n")); window.open(`https://wa.me/?text=${message}`, "_blank"); }} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#34d399', background: 'none', border: 'none' }}>
-                            <MessageCircle className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Promo</span>
-                        </button>
-
-                        <button onClick={() => setShowPromotions(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#818cf8', background: 'none', border: 'none' }}>
-                            <Sparkles className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#818cf8' }}>Kits IA</span>
-                        </button>
-
-                        <button onClick={() => setShowReports(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#fbbf24', background: 'none', border: 'none' }}>
-                            <BarChart className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Report</span>
-                        </button>
-
-                        <button onClick={() => window.open('/demo', '_blank')} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#fbbf24', background: 'none', border: 'none' }}>
-                            <Sparkles className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#fbbf24' }}>Demos AI</span>
-                        </button>
-
-                        <button onClick={() => setShowSecurityPanel(true)} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#f43f5e', background: 'none', border: 'none' }}>
-                            <Camera className="w-5 h-5" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#cbd5e1' }}>Cams</span>
-                        </button>
-
-                        <button onClick={triggerPanicAction} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#ef4444', background: 'none', border: 'none', marginTop: 'auto' }}>
-                            <ShieldAlert className="w-5 h-5 animate-pulse" />
-                            <span style={{ fontSize: '8px', fontWeight: '900', textTransform: 'uppercase', color: '#ef4444' }}>Pánico</span>
-                        </button>
-                    </div>
-
                     {/* Contenido Principal Móvil */}
-                    <div className="flex-1 overflow-y-auto p-2 pb-24 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <div className="flex-1 overflow-y-auto p-2 pb-32 touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
                         {activeTab === 'pedidos' && (
                             <div className="flex flex-col gap-3 relative">
                                 {/* VISOR DE COINCIDENCIAS DE VOZ */}

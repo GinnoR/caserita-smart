@@ -81,7 +81,7 @@ export function InstallPWA() {
   }
 
   return (
-    <div className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-40 flex items-center bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl shadow-blue-900/50 transition-all text-xs md:text-sm pl-3.5 pr-2 py-2 border border-blue-400/30 animate-in slide-in-from-bottom-2">
+    <div className="fixed bottom-20 left-4 md:bottom-6 md:right-6 md:left-auto z-40 flex items-center bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-2xl shadow-blue-900/50 transition-all text-xs md:text-sm pl-3.5 pr-2 py-2 border border-blue-400/30 animate-in slide-in-from-bottom-2">
       <button
         onClick={handleInstallClick}
         className="flex items-center gap-2 font-bold cursor-pointer pr-2"

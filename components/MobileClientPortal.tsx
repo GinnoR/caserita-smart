@@ -697,48 +697,35 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
     }
 
     return (
-        <div className="flex flex-col h-[100dvh] bg-slate-50 max-w-md mx-auto shadow-2xl relative overflow-hidden">
-            {/* Encabezado Móvil - COLOR DE CONTROL PARA VERIFICAR ACTUALIZACIÓN */}
-            <header className="bg-gradient-to-r from-indigo-900 via-indigo-700 to-indigo-800 text-white p-5 shadow-2xl sticky top-0 z-10 flex flex-col gap-2">
+        <div className="flex flex-col min-h-screen bg-slate-100 max-w-md mx-auto shadow-2xl relative">
+            {/* Encabezado Móvil Oficial */}
+            <header className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 shadow-xl sticky top-0 z-30 flex flex-col gap-2 border-b border-white/10">
                 <div className="flex items-center gap-3 w-full">
                     <button
-                        onClick={() => router.push('/escaneo-qr')}
-                        className="p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors flex-shrink-0"
-                        aria-label="Volver al escáner"
+                        onClick={() => (window.history.length > 1 ? router.back() : router.push('/'))}
+                        className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 rounded-2xl transition-all flex-shrink-0 border border-white/10"
+                        aria-label="Volver"
                     >
-                        <ArrowLeft className="w-5 h-5" />
+                        <ArrowLeft className="w-5 h-5 text-amber-400" />
                     </button>
-                    <div className="flex-1">
-                        <p className="text-[9px] text-indigo-300 uppercase font-black tracking-widest leading-none mb-1">Caserita Smart v2.0</p>
-                        <h1 className="text-xl font-black leading-none line-clamp-1 italic">{businessName}</h1>
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <p className="text-[10px] text-emerald-300 uppercase font-black tracking-widest leading-none">Catálogo En Línea</p>
+                        </div>
+                        <h1 className="text-lg font-black leading-tight line-clamp-1 text-white tracking-tight mt-0.5">{businessName}</h1>
                     </div>
                     <button
                         onClick={() => setShowCartModal(true)}
-                        className="bg-white/10 p-2.5 rounded-full relative flex-shrink-0 active:scale-90 transition-transform border border-white/10"
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white p-2.5 rounded-2xl relative flex-shrink-0 active:scale-90 transition-transform shadow-lg border border-emerald-400/30 flex items-center justify-center"
+                        title="Ver Carrito"
                     >
-                        <ShoppingBag className="w-5 h-5 text-white" />
+                        <ShoppingBag className="w-5 h-5" />
                         {cart.length > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-yellow-400 text-indigo-900 text-[10px] font-black min-w-[18px] h-4.5 px-1 rounded-full flex items-center justify-center shadow-md animate-bounce">
+                            <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-[10px] font-black min-w-[20px] h-5 px-1 rounded-full flex items-center justify-center shadow-md animate-bounce border-2 border-slate-900">
                                 {cart.length}
                             </span>
                         )}
-                    </button>
-                </div>
-                
-                {/* BOTÓN DE DIAGNÓSTICO (Solo visible en dev para confirmar que el código cambió) */}
-                <div className="flex gap-2">
-                    <button 
-                        onClick={() => {
-                            setProducts(prev => prev.map(p => 
-                                p.name.toLowerCase().includes("arroz") || p.name.toLowerCase().includes("azúcar") 
-                                ? { ...p, unidades_base: 50, stock: 100 } 
-                                : p
-                            ));
-                            speak("Formato de sacos activado para la prueba.");
-                        }}
-                        className="flex-1 bg-white/5 border border-white/20 text-[8px] font-black py-1 px-2 rounded-lg hover:bg-white/10 active:bg-white/20"
-                    >
-                        🧪 FORZAR FORMATO SACO (PRUEBA)
                     </button>
                 </div>
             </header>
@@ -809,7 +796,7 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                                 )}
                             </div>
                         ) : (
-                            <div className="grid grid-cols-2 gap-3 pb-60 mt-2">
+                            <div className="grid grid-cols-2 gap-3 pb-36 mt-2">
                                 {displayedProducts.map((product: any, idx: number) => {
                                     const display = formatStock(product.stock, product.unidades_base, product.name, product.um, product.sale_type);
                                     const isLowStock = product.stock <= (product.unidades_base > 1 ? product.unidades_base : 5);
@@ -856,25 +843,22 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
             </main>
 
             {/* Panel Inferior Flotante (Micrófono y Resumen del Carrito) */}
-            <div className="fixed bottom-0 w-full max-w-md bg-white border-t border-slate-200 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] rounded-t-3xl z-20">
-
-                {/* Resumen del Carrito simplificado (Solo botón si no está el modal abierto) */}
-
-                <div className="p-4 flex gap-3 h-24 items-center justify-center bg-white rounded-t-3xl">
+            <div className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-[0_-10px_30px_rgba(0,0,0,0.08)] rounded-t-3xl z-20 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                <div className="p-3.5 flex gap-3 items-center justify-center">
                     {/* Botón Enviar Pedido */}
                     <button
                         onClick={() => setShowCartModal(true)}
                         disabled={cart.length === 0 || isSubmitting || isListening}
                         className={cn(
-                            "flex-1 h-14 rounded-2xl flex items-center justify-between px-6 font-black text-lg transition-all shadow-md group relative overflow-hidden",
+                            "flex-1 h-14 rounded-2xl flex items-center justify-between px-5 font-black text-base transition-all shadow-md group relative overflow-hidden",
                             cart.length === 0 || isListening
                                 ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none"
-                                : "bg-green-500 hover:bg-green-600 text-white active:scale-[0.98]"
+                                : "bg-emerald-600 hover:bg-emerald-700 text-white active:scale-[0.98] shadow-emerald-600/30"
                         )}
                     >
                         {isSubmitting ? (
                             <div className="w-full flex justify-center py-2">
-                                <Loader2 className="w-6 h-6 animate-spin text-green-500" />
+                                <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
                             </div>
                         ) : (
                             <>
@@ -886,33 +870,28 @@ export function MobileClientPortal({ caseroId }: MobileClientPortalProps) {
                                     <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-black">{cart.length} items</span>
                                     <Send className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </div>
-                                <div className="absolute right-0 top-0 h-full w-12 bg-white/20 -skew-x-12 translate-x-full group-hover:animate-[shimmer_1.5s_infinite]"></div>
                             </>
                         )}
                     </button>
 
-                    {/* Botón de Micrófono Principal (Ahora a la derecha) */}
+                    {/* Botón de Micrófono Principal */}
                     <button
                         onClick={isListening ? stopListening : startListening}
                         className={cn(
-                            "flex-shrink-0 h-16 w-16 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 transform",
+                            "flex-shrink-0 h-14 w-14 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300",
                             isListening
-                                ? "bg-slate-800 text-white scale-95"
-                                : "bg-red-600 text-white hover:bg-red-700 hover:scale-105"
+                                ? "bg-slate-900 text-white ring-4 ring-red-400 scale-95"
+                                : "bg-amber-500 text-slate-900 hover:bg-amber-400 hover:scale-105 active:scale-95 shadow-amber-500/30"
                         )}
                         aria-label={isListening ? "Detener grabación" : "Iniciar grabación"}
                     >
                         {isListening ? (
-                            <MicOff className="w-8 h-8" />
+                            <MicOff className="w-7 h-7" />
                         ) : (
-                            <div className="relative">
-                                <Mic className="w-8 h-8" />
-                            </div>
+                            <Mic className="w-7 h-7" />
                         )}
                     </button>
                 </div>
-                {/* Spacer para evitar que el navegador móvil tape los botones */}
-                <div className="h-6 bg-white w-full"></div>
             </div>
             {/* Modal de Carrito (Edición) */}
             {showCartModal && (

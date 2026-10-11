@@ -15,9 +15,7 @@ export function OrderPanel({
     onUpdateQty,
     onManualEntry
 }: OrderPanelProps) {
-    const [isExpanded, setIsExpanded] = (typeof window !== 'undefined' && window.innerWidth < 640)
-        ? useState(false)
-        : useState(true);
+    const [isExpanded, setIsExpanded] = useState(true);
 
     const total = cart.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
@@ -59,7 +57,7 @@ export function OrderPanel({
                         <div key={idx} className="flex flex-col bg-white p-3 rounded-2xl shadow-sm border border-slate-100 relative group transition-all hover:shadow-md hover:border-slate-300">
                             <div className="flex justify-between items-start mb-2">
                                 <span className="font-black text-sm text-slate-900 uppercase leading-tight pr-8">{item.name}</span>
-                                <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="absolute right-2 top-2 flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                     <button 
                                         onClick={(e) => {
                                             e.stopPropagation();
