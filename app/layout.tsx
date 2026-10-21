@@ -10,8 +10,8 @@ import { InstallPWA } from "@/components/InstallPWA";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Caserita Smart · Premium Organic POS",
-  description: "POS Inteligente y Catálogo Orgánico Premium para Bodegas",
+  title: "Caserita Smart V1.2.26",
+  description: "POS Inteligente para Bodegas Peruanas",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -36,13 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" className="h-full">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;1,600&display=swap" rel="stylesheet" />
-        <link rel="stylesheet" href="/prototype/styles.css" />
-      </head>
-      <body className={cn(inter.className, "bg-[#F8F6F0] text-slate-900 min-h-screen relative flex flex-col antialiased selection:bg-emerald-500 selection:text-white")}>
+      <body className={cn(inter.className, "bg-slate-900 text-white min-h-screen relative flex flex-col antialiased selection:bg-emerald-500 selection:text-white")}>
         <PWARegister />
         <InstallPWA />
         <ClientLayoutCleaner />
