@@ -1379,3 +1379,5 @@ export function PremiumOrganicPOS({ onSwitchClassic, onSwitchLanding }: PremiumO
         </>
     );
 }
+
+export default PremiumOrganicPOS;
