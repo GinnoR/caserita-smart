@@ -8,7 +8,7 @@ import { OrderPanel } from "@/components/OrderPanel";
 import { InventoryPanel } from "@/components/InventoryPanel";
 import { ActionPanel } from "@/components/ActionPanel";
 import { PaymentMethods } from "@/components/PaymentMethods";
-import { ShieldAlert, Store, Camera, X, Smartphone, Search, FileText, Share2, UserCheck, Settings, QrCode, Database, MoreHorizontal, PieChart, MessageCircle, BarChart, Eye, Sparkles, Calculator, Menu } from "lucide-react";
+import { ShieldAlert, Store, Camera, X, Smartphone, Search, FileText, Share2, UserCheck, Settings, QrCode, Database, MoreHorizontal, PieChart, MessageCircle, BarChart, Eye, Sparkles, Calculator } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Footer } from "@/components/Footer";
 import { FiadosModal } from "@/components/FiadosModal";
@@ -1505,7 +1505,6 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
         return false;
     });
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const [isDesktopSidebarOpen, setIsDesktopSidebarOpen] = useState(false);
 
     useEffect(() => {
         const check = () => {
@@ -1673,66 +1672,38 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
             {/* ===== DESKTOP LAYOUT ===== */}
             {!isMobile && (
-                <div className="flex flex-1 overflow-hidden min-h-0 relative">
-                    {/* COLLAPSIBLE SIDEBAR DESKTOP (Oculto por defecto para que el Catálogo se aprecie completo) */}
-                    <aside className={cn(
-                        "bg-slate-900 text-slate-400 flex flex-col items-center py-5 shadow-2xl z-20 shrink-0 transition-all duration-300 ease-in-out border-r border-slate-800",
-                        isDesktopSidebarOpen ? "w-24 px-2 gap-7" : "w-0 p-0 overflow-hidden opacity-0 pointer-events-none border-none"
-                    )}>
-                        {isDesktopSidebarOpen && (
-                            <>
-                                <button 
-                                    onClick={() => setIsDesktopSidebarOpen(false)}
-                                    title="Ocultar Menú Lateral"
-                                    className="w-8 h-8 rounded-full bg-slate-800/80 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-all mb-1 hover:scale-110 active:scale-95"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => setActiveTab('pedidos')} className={`flex flex-col items-center gap-1.5 transition-all hover:text-white ${activeTab === 'pedidos' ? 'text-emerald-400 scale-105' : ''}`}>
-                                    <Store className="w-7 h-7" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider">Caja</span>
-                                </button>
-                                <button onClick={() => { setActiveTab('inventario'); setShowMaster(true); }} className={`flex flex-col items-center gap-1.5 transition-all hover:text-white ${activeTab === 'inventario' ? 'text-emerald-400 scale-105' : ''}`}>
-                                    <Database className="w-7 h-7" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider">Catálogo</span>
-                                </button>
-                                <button onClick={() => { setActiveTab('reportes'); setShowReports(true); }} className={`flex flex-col items-center gap-1.5 transition-all hover:text-white ${activeTab === 'reportes' ? 'text-emerald-400 scale-105' : ''}`}>
-                                    <BarChart className="w-7 h-7" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider">Finanzas</span>
-                                </button>
-                                <button onClick={() => { setActiveTab('cámaras'); setShowSecurityPanel(true); }} className={`flex flex-col items-center gap-1.5 transition-all hover:text-white ${activeTab === 'cámaras' ? 'text-emerald-400 scale-105' : ''}`}>
-                                    <Camera className="w-7 h-7" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider">Cámaras</span>
-                                </button>
-                                <div className="flex-1"></div>
-                                <button onClick={() => { setConfigTab('tributacion'); setShowConfig(true); }} className="flex flex-col items-center gap-1.5 transition-all hover:text-white mb-2 text-slate-400 hover:text-emerald-400">
-                                    <Calculator className="w-7 h-7" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider text-center leading-none">Tributos</span>
-                                </button>
-                                <button onClick={() => { setConfigTab('seguridad'); setShowConfig(true); }} className="flex flex-col items-center gap-1.5 transition-all hover:text-white text-slate-400">
-                                    <Settings className="w-7 h-7" />
-                                    <span className="text-[10px] font-black uppercase tracking-wider">Ajustes</span>
-                                </button>
-                            </>
-                        )}
-                    </aside>
-
-                    {/* MAIN CONTENT AREA (Catálogo expandido) */}
-                    <div className="flex-1 bg-slate-100 overflow-hidden flex flex-col p-4 relative min-h-0">
-                        {/* Botón para Mostrar/Ocultar Menú Lateral */}
-                        <button
-                            onClick={() => setIsDesktopSidebarOpen(prev => !prev)}
-                            title={isDesktopSidebarOpen ? "Ocultar menú lateral para ver todo el Catálogo" : "Mostrar menú lateral (Caja, Finanzas, Catálogo Maestro)"}
-                            className={cn(
-                                "absolute top-5 left-5 z-30 flex items-center gap-2 px-3 py-1.5 rounded-2xl shadow-md border backdrop-blur-md transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer text-xs font-black uppercase tracking-wider",
-                                isDesktopSidebarOpen 
-                                    ? "bg-slate-800/80 text-slate-300 border-slate-700 hover:bg-slate-700" 
-                                    : "bg-slate-900/90 text-white border-slate-700 hover:bg-slate-800 shadow-slate-900/30 ring-2 ring-emerald-500/30"
-                            )}
-                        >
-                            <Menu className="w-4 h-4 text-emerald-400" />
-                            <span>{isDesktopSidebarOpen ? "Ocultar" : "Menú"}</span>
+                <div className="flex flex-1 overflow-hidden min-h-0">
+                    {/* FIXED SIDEBAR DESKTOP */}
+                    <div className="w-24 bg-slate-900 text-slate-400 flex flex-col items-center py-6 gap-8 shadow-xl z-20 shrink-0">
+                        <button onClick={() => setActiveTab('pedidos')} className={`flex flex-col items-center gap-2 transition-all hover:text-white ${activeTab === 'pedidos' ? 'text-emerald-400 scale-110' : ''}`}>
+                            <Store className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Caja</span>
                         </button>
+                        <button onClick={() => { setActiveTab('inventario'); setShowMaster(true); }} className={`flex flex-col items-center gap-2 transition-all hover:text-white ${activeTab === 'inventario' ? 'text-emerald-400 scale-110' : ''}`}>
+                            <Database className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Catálogo</span>
+                        </button>
+                        <button onClick={() => { setActiveTab('reportes'); setShowReports(true); }} className={`flex flex-col items-center gap-2 transition-all hover:text-white ${activeTab === 'reportes' ? 'text-emerald-400 scale-110' : ''}`}>
+                            <BarChart className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Finanzas</span>
+                        </button>
+                        <button onClick={() => { setActiveTab('cámaras'); setShowSecurityPanel(true); }} className={`flex flex-col items-center gap-2 transition-all hover:text-white ${activeTab === 'cámaras' ? 'text-emerald-400 scale-110' : ''}`}>
+                            <Camera className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Cámaras</span>
+                        </button>
+                        <div className="flex-1"></div>
+                        <button onClick={() => { setConfigTab('tributacion'); setShowConfig(true); }} className="flex flex-col items-center gap-2 transition-all hover:text-white mb-4 text-slate-400 hover:text-emerald-400">
+                            <Calculator className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider text-center leading-none">Tributos</span>
+                        </button>
+                        <button onClick={() => { setConfigTab('seguridad'); setShowConfig(true); }} className="flex flex-col items-center gap-2 transition-all hover:text-white text-slate-400">
+                            <Settings className="w-8 h-8" />
+                            <span className="text-[10px] font-black uppercase tracking-wider">Ajustes</span>
+                        </button>
+                    </div>
+
+                    {/* MAIN CONTENT AREA */}
+                    <div className="flex-1 bg-slate-100 overflow-hidden flex flex-col p-4 relative min-h-0">
                         {activeTab === 'pedidos' && (
                             <div className="flex flex-1 gap-4 overflow-hidden min-h-0">
                                 {/* Zona Izquierda: Buscador e Inventario visual */}
@@ -1760,7 +1731,7 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                             </div>
                         )}
 
-                        {/* Botón Flotante para Micrófono con Iluminación Claude - SOLO VISIBLE EN MODO PEDIDOS */}
+                        {/* Botón Flotante para Micrófono - SOLO VISIBLE EN MODO PEDIDOS */}
                         {activeTab === 'pedidos' && (
                             <div className="fixed bottom-14 right-6 lg:right-8 z-[999] pointer-events-auto">
                                 <button
@@ -1769,11 +1740,11 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                         if (isListening) stopListening(); 
                                         else startListening(); 
                                     }}
-                                    title={isListening ? "Detener dictado de voz estilo Claude" : (aiMode === 'asistente' ? "Hablar con Asistente IA" : "Dictar pedido por voz")}
+                                    title={isListening ? "Detener dictado de voz" : (aiMode === 'asistente' ? "Hablar con Asistente IA" : "Dictar pedido por voz")}
                                     className={cn(
-                                        "group flex items-center gap-3 px-5 py-3.5 rounded-full transition-all duration-300 hover:scale-105 active:scale-95 border-2 cursor-pointer",
+                                        "group flex items-center gap-3 px-5 py-3.5 rounded-full shadow-[0_10px_35px_rgba(0,0,0,0.5)] transition-all duration-300 hover:scale-105 active:scale-95 border-2 cursor-pointer",
                                         isListening 
-                                            ? "bg-gradient-to-r from-[#D97757] via-[#F59E0B] to-[#B45309] border-[#FEF08A] text-white shadow-[0_0_35px_rgba(245,158,11,0.9),0_0_70px_rgba(217,119,87,0.7)] ring-4 ring-[#F59E0B]/50 animate-pulse" 
+                                            ? "bg-red-500 hover:bg-red-600 border-white text-white animate-pulse shadow-[0_0_30px_rgba(239,68,68,0.9)] ring-4 ring-red-400/50" 
                                             : (aiMode === 'asistente' 
                                                 ? "bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 hover:from-purple-500 hover:to-indigo-500 border-purple-300/60 text-white shadow-[0_0_25px_rgba(168,85,247,0.6)]" 
                                                 : "bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-700 hover:from-emerald-500 hover:to-teal-600 border-emerald-300/60 text-white shadow-[0_10px_30px_rgba(16,185,129,0.5)]")
@@ -1781,32 +1752,16 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                 >
                                     <div className={cn(
                                         "w-11 h-11 rounded-full flex items-center justify-center transition-transform group-hover:scale-110 shadow-inner",
-                                        isListening ? "bg-gradient-to-br from-[#FEF08A] to-[#F59E0B] text-slate-900 shadow-[0_0_15px_rgba(254,240,138,0.9)]" : "bg-white/20 text-white"
+                                        isListening ? "bg-white text-red-600" : "bg-white/20 text-white"
                                     )}>
-                                        {isListening ? (
-                                            <div className="flex items-center gap-0.5 h-5 px-1">
-                                                <span className="w-1 bg-slate-900 rounded-full animate-[bounce_1s_infinite_100ms] h-3"></span>
-                                                <span className="w-1 bg-slate-900 rounded-full animate-[bounce_1s_infinite_300ms] h-5"></span>
-                                                <span className="w-1 bg-slate-900 rounded-full animate-[bounce_1s_infinite_150ms] h-4"></span>
-                                                <span className="w-1 bg-slate-900 rounded-full animate-[bounce_1s_infinite_400ms] h-2"></span>
-                                            </div>
-                                        ) : (
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                            </svg>
-                                        )}
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
                                     </div>
                                     <div className="flex flex-col text-left pr-2">
-                                        <span className="text-[10px] font-black uppercase tracking-wider leading-tight flex items-center gap-1.5">
-                                            {isListening ? (
-                                                <>
-                                                    <span className="w-2 h-2 rounded-full bg-[#FEF08A] animate-ping inline-block"></span>
-                                                    <span className="text-[#FEF08A] font-black">Claude IA Escuchando...</span>
-                                                </>
-                                            ) : (aiMode === 'asistente' ? "Asistente IA" : "Voz Inteligente")}
+                                        <span className="text-[10px] font-black uppercase tracking-wider opacity-90 leading-tight">
+                                            {isListening ? "Escuchando voz..." : (aiMode === 'asistente' ? "Asistente IA" : "Voz Inteligente")}
                                         </span>
                                         <span className="text-sm font-black uppercase tracking-tight leading-none">
-                                            {isListening ? "¡Dicta tu pedido!" : (aiMode === 'asistente' ? "Preguntar" : "Dictar Pedido")}
+                                            {isListening ? "¡Habla ahora!" : (aiMode === 'asistente' ? "Preguntar" : "Dictar Pedido")}
                                         </span>
                                     </div>
                                 </button>
@@ -2047,18 +2002,18 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                         </div>
                     )}
 
-                    {/* BOTÓN FLOTANTE GIGANTE DE MICRÓFONO CON ILUMINACIÓN CLAUDE (FAB MÓVIL) */}
+                    {/* BOTÓN FLOTANTE GIGANTE DE MICRÓFONO (FAB MÓVIL) */}
                     <div className="fixed bottom-20 right-4 z-[9999] flex flex-col items-center">
                         {/* Badge indicador flotante */}
                         <div className={cn(
-                            "mb-1 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl border pointer-events-none transition-all whitespace-nowrap",
+                            "mb-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-xl border pointer-events-none transition-all whitespace-nowrap",
                             isListening 
-                                ? "bg-gradient-to-r from-[#D97757] to-[#F59E0B] text-slate-950 font-black border-[#FEF08A] shadow-[0_0_18px_rgba(245,158,11,0.85)] animate-pulse" 
+                                ? "bg-red-600 text-white border-white animate-pulse" 
                                 : voiceError
                                     ? "bg-amber-600 text-white border-amber-300 animate-bounce"
                                     : "bg-slate-900/95 text-amber-300 border-amber-400/50 shadow-black/40"
                         )}>
-                            {isListening ? "✨ CLAUDE ESCUCHANDO..." : voiceError ? "⚠️ REVISAR MICRÓFONO" : "🎤 TOCAR PARA HABLAR"}
+                            {isListening ? "🔴 ¡HABLA AHORA!" : voiceError ? "⚠️ REVISAR MICRÓFONO" : "🎤 TOCAR PARA HABLAR"}
                         </div>
 
                         <button
@@ -2069,29 +2024,20 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
                                 if (isListening) stopListening(); 
                                 else startListening(); 
                             }}
-                            aria-label="Dictar pedido por voz con IA estilo Claude"
+                            aria-label="Dictar pedido por voz"
                             title={isListening ? "Detener dictado" : "Tocar para hablar por voz"}
                             className={cn(
                                 "w-[72px] h-[72px] rounded-full flex items-center justify-center border-4 border-white shadow-[0_12px_35px_rgba(249,115,22,0.7)] transition-all duration-300 active:scale-90 cursor-pointer",
                                 isListening
-                                    ? "bg-gradient-to-tr from-[#D97757] via-[#F59E0B] to-[#B45309] ring-8 ring-[#F59E0B]/60 text-white shadow-[0_0_50px_rgba(245,158,11,0.9)] animate-pulse"
+                                    ? "bg-gradient-to-tr from-red-600 to-rose-600 ring-8 ring-red-400/60 animate-bounce text-white shadow-[0_0_40px_rgba(239,68,68,0.9)]"
                                     : voiceError
                                         ? "bg-gradient-to-tr from-amber-600 to-red-600 ring-4 ring-amber-400 text-white hover:scale-105"
                                         : "bg-gradient-to-tr from-amber-500 via-orange-500 to-red-500 ring-4 ring-orange-400/50 animate-pulse text-white hover:scale-105"
                             )}
                         >
-                            {isListening ? (
-                                <div className="flex items-center gap-1 h-6">
-                                    <span className="w-1.5 bg-white rounded-full animate-[bounce_1s_infinite_100ms] h-4"></span>
-                                    <span className="w-1.5 bg-amber-200 rounded-full animate-[bounce_1s_infinite_300ms] h-7"></span>
-                                    <span className="w-1.5 bg-white rounded-full animate-[bounce_1s_infinite_150ms] h-5"></span>
-                                    <span className="w-1.5 bg-amber-200 rounded-full animate-[bounce_1s_infinite_400ms] h-3"></span>
-                                </div>
-                            ) : (
-                                <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.8}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                </svg>
-                            )}
+                            <svg xmlns="http://www.w3.org/2000/svg" width="34" height="34" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.8}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                            </svg>
                         </button>
                     </div>
 
@@ -2153,26 +2099,15 @@ export default function Dashboard({ userId, cajeroNombre = 'Dueño/a', onLogout 
 
             {!isMobile && <Footer summary={dailySummary} />}
 
-            {/* Voice Status & Transcript Overlay Iluminado estilo Claude */}
+            {/* Voice Status & Transcript Overlay */}
             {isListening && (
                 <div className={cn(
-                    "fixed top-14 lg:bottom-24 left-1/2 -translate-x-1/2 text-white px-6 py-3 rounded-full flex items-center gap-3.5 z-[10000] border-2 shadow-[0_0_40px_rgba(245,158,11,0.7),0_0_80px_rgba(217,119,87,0.5)] max-w-[90vw] truncate backdrop-blur-xl animate-in fade-in slide-in-from-bottom-2 duration-300",
-                    aiMode === 'asistente' 
-                        ? "bg-purple-950/95 border-purple-400 shadow-[0_0_30px_rgba(168,85,247,0.7)]" 
-                        : "bg-gradient-to-r from-[#181411]/95 via-[#2b1810]/95 to-[#181411]/95 border-[#F59E0B]"
+                    "fixed top-14 lg:bottom-24 left-1/2 -translate-x-1/2 text-white px-5 py-2.5 rounded-full flex items-center gap-3 z-[10000] animate-pulse border-2 shadow-2xl max-w-[90vw] truncate",
+                    aiMode === 'asistente' ? "bg-purple-900/95 border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.7)]" : "bg-slate-900/95 border-red-500 shadow-[0_0_20px_rgba(239,68,68,0.7)]"
                 )}>
-                    <div className="relative flex items-center justify-center shrink-0">
-                        <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-r from-[#D97757] to-[#F59E0B] animate-ping absolute"></span>
-                        <span className="w-3.5 h-3.5 rounded-full bg-amber-400 relative shadow-[0_0_10px_#F59E0B]"></span>
-                    </div>
-                    <div className="flex items-center gap-1 h-4 shrink-0">
-                        <span className="w-1 h-2.5 bg-amber-300 rounded-full animate-[bounce_0.8s_infinite_100ms]"></span>
-                        <span className="w-1 h-4 bg-amber-400 rounded-full animate-[bounce_0.8s_infinite_250ms]"></span>
-                        <span className="w-1 h-3 bg-amber-300 rounded-full animate-[bounce_0.8s_infinite_150ms]"></span>
-                        <span className="w-1 h-4.5 bg-amber-500 rounded-full animate-[bounce_0.8s_infinite_350ms]"></span>
-                    </div>
-                    <span className="font-extrabold text-sm lg:text-base text-amber-200 truncate drop-shadow">
-                        {interimTranscript || (aiMode === 'asistente' ? "Asistente Escuchando..." : "✨ Claude escuchando voz... Di por ejemplo: '2 kilos de palta y quinua'")}
+                    <div className={cn("w-3 h-3 rounded-full shrink-0 shadow-inner", aiMode === 'asistente' ? "bg-purple-400" : "bg-red-500")}></div>
+                    <span className="font-bold text-sm lg:text-lg truncate">
+                        {interimTranscript || (aiMode === 'asistente' ? "Asistente Escuchando..." : "Escuchando voz...")}
                     </span>
                 </div>
             )}
