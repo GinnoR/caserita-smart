@@ -188,6 +188,8 @@ export function PremiumOrganicPOS({ onSwitchClassic, onSwitchLanding }: PremiumO
     const [isClaudeListening, setIsClaudeListening] = useState<boolean>(false);
     const [transcript, setTranscript] = useState<string>("Escuchando atentamente... Di los productos que deseas agregar");
     const [isVoiceModalOpen, setIsVoiceModalOpen] = useState<boolean>(false);
+    const [activeMenuTab, setActiveMenuTab] = useState<'caja' | 'catalogo' | 'finanzas' | 'camaras' | 'tributos' | 'ajustes'>('caja');
+    const [openModuleModal, setOpenModuleModal] = useState<null | 'catalogo' | 'finanzas' | 'camaras' | 'tributos' | 'ajustes'>(null);
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [clockStr, setClockStr] = useState<string>("20:14");
 
@@ -368,74 +370,132 @@ export function PremiumOrganicPOS({ onSwitchClassic, onSwitchLanding }: PremiumO
                     onClick={() => setIsSidebarOpen(false)}
                 />
 
-                {/* Sidebar Off-Canvas (Oculto por defecto) */}
-                <aside className={`sidebar ${isSidebarOpen ? "open" : ""}`} id="app-sidebar">
-                    <div className="brand">
-                        <div className="brand-left">
-                            <div className="brand-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path>
-                                    <path d="M3 6h18"></path>
-                                    <path d="M16 10a4 4 0 0 1-8 0"></path>
-                                </svg>
-                            </div>
-                            <div className="brand-info">
-                                <span className="brand-name">Caserita</span>
-                                <span className="brand-tag">SMART ORGANIC</span>
-                            </div>
-                        </div>
-                        <button className="sidebar-close-btn" onClick={() => setIsSidebarOpen(false)} title="Cerrar Menú">✕</button>
+                {/* Sidebar Navigation (Exact Match to User's Screenshot: Rail Off-Canvas) */}
+                <aside className={`sidebar rail-sidebar ${isSidebarOpen ? "open" : ""}`} id="app-sidebar">
+                    <div className="sidebar-top-action">
+                        <button 
+                            className="sidebar-close-btn" 
+                            onClick={() => setIsSidebarOpen(false)} 
+                            title="Ocultar Menú"
+                        >
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
                     </div>
 
-                    <nav className="nav-menu">
-                        <a href="#pos" className="nav-item active">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
-                            <span>Punto de Venta</span>
-                        </a>
-                        <a href="#catalogo" className="nav-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
-                            <span>Catálogo Fresco</span>
-                        </a>
-                        <a href="#pedidos" className="nav-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                            <span>Pedidos & Delivery</span>
-                            <span className="badge-pill">4</span>
-                        </a>
-                        <a href="#finanzas" className="nav-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-                            <span>Caja & Finanzas</span>
-                        </a>
-                        <a href="#clientes" className="nav-item">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                            <span>Clientes Frecuentes</span>
-                        </a>
+                    <nav className="nav-menu rail-nav">
+                        {/* 1. CAJA */}
+                        <button 
+                            className={`rail-item ${activeMenuTab === "caja" ? "active" : ""}`} 
+                            onClick={() => {
+                                setActiveMenuTab("caja");
+                                setOpenModuleModal(null);
+                                showToast("🏪 Punto de Venta activo");
+                            }}
+                            title="Punto de Venta / Caja"
+                        >
+                            <svg className="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"></path>
+                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
+                                <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"></path>
+                                <path d="M2 7h20"></path>
+                                <path d="M22 7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2"></path>
+                            </svg>
+                            <span className="rail-label">CAJA</span>
+                        </button>
+
+                        {/* 2. CATÁLOGO */}
+                        <button 
+                            className={`rail-item ${activeMenuTab === "catalogo" ? "active" : ""}`} 
+                            onClick={() => {
+                                setActiveMenuTab("catalogo");
+                                setOpenModuleModal("catalogo");
+                            }}
+                            title="Catálogo de Productos"
+                        >
+                            <svg className="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                                <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"></path>
+                            </svg>
+                            <span className="rail-label">CATÁLOGO</span>
+                        </button>
+
+                        {/* 3. FINANZAS */}
+                        <button 
+                            className={`rail-item ${activeMenuTab === "finanzas" ? "active" : ""}`} 
+                            onClick={() => {
+                                setActiveMenuTab("finanzas");
+                                setOpenModuleModal("finanzas");
+                            }}
+                            title="Finanzas & Reportes"
+                        >
+                            <svg className="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="6" y1="20" x2="6" y2="14"></line>
+                                <line x1="12" y1="20" x2="12" y2="6"></line>
+                                <line x1="18" y1="20" x2="18" y2="2"></line>
+                            </svg>
+                            <span className="rail-label">FINANZAS</span>
+                        </button>
+
+                        {/* 4. CÁMARAS */}
+                        <button 
+                            className={`rail-item ${activeMenuTab === "camaras" ? "active" : ""}`} 
+                            onClick={() => {
+                                setActiveMenuTab("camaras");
+                                setOpenModuleModal("camaras");
+                            }}
+                            title="Cámaras de Seguridad"
+                        >
+                            <svg className="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                                <circle cx="12" cy="13" r="3"></circle>
+                            </svg>
+                            <span className="rail-label">CÁMARAS</span>
+                        </button>
+
+                        {/* 5. TRIBUTOS */}
+                        <button 
+                            className={`rail-item ${activeMenuTab === "tributos" ? "active" : ""}`} 
+                            onClick={() => {
+                                setActiveMenuTab("tributos");
+                                setOpenModuleModal("tributos");
+                            }}
+                            title="Configuración Tributaria"
+                        >
+                            <svg className="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect width="16" height="20" x="4" y="2" rx="2"></rect>
+                                <line x1="8" x2="16" y1="6" y2="6"></line>
+                                <line x1="16" x2="16" y1="14" y2="18"></line>
+                                <path d="M16 10h.01"></path>
+                                <path d="M12 10h.01"></path>
+                                <path d="M8 10h.01"></path>
+                                <path d="M12 14h.01"></path>
+                                <path d="M8 14h.01"></path>
+                                <path d="M12 18h.01"></path>
+                                <path d="M8 18h.01"></path>
+                            </svg>
+                            <span className="rail-label">TRIBUTOS</span>
+                        </button>
+
+                        {/* 6. AJUSTES */}
+                        <button 
+                            className={`rail-item ${activeMenuTab === "ajustes" ? "active" : ""}`} 
+                            onClick={() => {
+                                setActiveMenuTab("ajustes");
+                                setOpenModuleModal("ajustes");
+                            }}
+                            title="Ajustes del Sistema"
+                        >
+                            <svg className="rail-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                            </svg>
+                            <span className="rail-label">AJUSTES</span>
+                        </button>
                     </nav>
-
-                    <div className="sidebar-footer">
-                        {onSwitchClassic && (
-                            <button 
-                                onClick={onSwitchClassic}
-                                className="w-full mb-2 py-2 px-3 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl flex items-center justify-center gap-2 border border-slate-700 transition-colors font-bold cursor-pointer"
-                            >
-                                <span>⚙️ Abrir Configuración / Master</span>
-                            </button>
-                        )}
-                        {onSwitchLanding && (
-                            <button 
-                                onClick={onSwitchLanding}
-                                className="w-full mb-3 py-2 px-3 text-xs bg-slate-800/60 hover:bg-slate-700 text-slate-400 rounded-xl flex items-center justify-center gap-2 border border-slate-700/60 transition-colors cursor-pointer"
-                            >
-                                <span>🌐 Ver Landing Page Web</span>
-                            </button>
-                        )}
-                        <div className="user-profile">
-                            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80" alt="Administradora" className="user-avatar" />
-                            <div className="user-meta">
-                                <span className="user-name">Camila Rivera</span>
-                                <span className="user-role">Sede San Isidro</span>
-                            </div>
-                        </div>
-                    </div>
                 </aside>
 
                 {/* Main Content Area */}
@@ -936,6 +996,379 @@ export function PremiumOrganicPOS({ onSwitchClassic, onSwitchLanding }: PremiumO
                 </div>
             </div>
 
+            {/* ==========================================================================
+                 MODULE MODALS (Catálogo, Finanzas, Cámaras, Tributos, Ajustes)
+                 ========================================================================== */}
+            
+            {/* 1. Modal Catálogo Maestro */}
+            {openModuleModal === "catalogo" && (
+                <div className="module-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) { setOpenModuleModal(null); setActiveMenuTab("caja"); } }}>
+                    <div className="module-modal-window">
+                        <div className="module-modal-header">
+                            <div className="module-modal-title-group">
+                                <div className="module-modal-icon-badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="22" height="22">
+                                        <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+                                        <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 className="module-modal-title">Catálogo Maestro de Productos</h3>
+                                    <p className="module-modal-sub">Inventario centralizado y control de stock en tiempo real</p>
+                                </div>
+                            </div>
+                            <button className="module-modal-close" onClick={() => { setOpenModuleModal(null); setActiveMenuTab("caja"); }}>✕</button>
+                        </div>
+                        <div className="module-modal-body">
+                            <div className="module-stats-row">
+                                <div className="mstat-card">
+                                    <span className="mstat-num">{PRODUCTS.length}</span>
+                                    <span className="mstat-lbl">SKUs Activos</span>
+                                </div>
+                                <div className="mstat-card">
+                                    <span className="mstat-num" style={{ color: "#059669" }}>S/ 8,420</span>
+                                    <span className="mstat-lbl">Valor Inventario</span>
+                                </div>
+                                <div className="mstat-card">
+                                    <span className="mstat-num" style={{ color: "#ea580c" }}>3</span>
+                                    <span className="mstat-lbl">Stock Bajo</span>
+                                </div>
+                                <div className="mstat-card">
+                                    <span className="mstat-num" style={{ color: "#6366f1" }}>100%</span>
+                                    <span className="mstat-lbl">Orgánico Certificado</span>
+                                </div>
+                            </div>
+
+                            <div className="modal-table-container">
+                                <table className="modal-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Producto</th>
+                                            <th>Categoría</th>
+                                            <th>Precio</th>
+                                            <th>Stock</th>
+                                            <th>Estado</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {PRODUCTS.slice(0, 6).map((p) => (
+                                            <tr key={p.id}>
+                                                <td><strong>{p.name}</strong></td>
+                                                <td><span className="table-tag">{p.category}</span></td>
+                                                <td>S/ {p.price.toFixed(2)} / {p.unit}</td>
+                                                <td>{p.stock}</td>
+                                                <td><span className="stock-badge in-stock">Óptimo</span></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div className="module-modal-footer">
+                            <button className="btn-secondary" onClick={() => { setOpenModuleModal(null); setActiveMenuTab("caja"); }}>Cerrar</button>
+                            <button className="btn-primary" onClick={() => alert("Función para agregar nuevo producto activada")}>+ Agregar Nuevo Producto</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 2. Modal Finanzas & Reportes */}
+            {openModuleModal === "finanzas" && (
+                <div className="module-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) { setOpenModuleModal(null); setActiveMenuTab("caja"); } }}>
+                    <div className="module-modal-window">
+                        <div className="module-modal-header">
+                            <div className="module-modal-title-group">
+                                <div className="module-modal-icon-badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="22" height="22">
+                                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                                        <line x1="12" y1="20" x2="12" y2="6"></line>
+                                        <line x1="18" y1="20" x2="18" y2="2"></line>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 className="module-modal-title">Finanzas & Cuadre de Caja</h3>
+                                    <p className="module-modal-sub">Caja chica, cobros digitales y reporte Z de ventas del día</p>
+                                </div>
+                            </div>
+                            <button className="module-modal-close" onClick={() => { setOpenModuleModal(null); setActiveMenuTab("caja"); }}>✕</button>
+                        </div>
+                        <div className="module-modal-body">
+                            <div className="module-stats-row">
+                                <div className="mstat-card highlight-green">
+                                    <span className="mstat-num" style={{ color: "#065f46" }}>S/ 1,485.20</span>
+                                    <span className="mstat-lbl">Ventas Hoy (Bruto)</span>
+                                </div>
+                                <div className="mstat-card">
+                                    <span className="mstat-num">35</span>
+                                    <span className="mstat-lbl">Tickets Emitidos</span>
+                                </div>
+                                <div className="mstat-card">
+                                    <span className="mstat-num">S/ 42.40</span>
+                                    <span className="mstat-lbl">Ticket Promedio</span>
+                                </div>
+                                <div className="mstat-card">
+                                    <span className="mstat-num" style={{ color: "#059669" }}>S/ 267.33</span>
+                                    <span className="mstat-lbl">IGV 18% Declarable</span>
+                                </div>
+                            </div>
+
+                            <div className="payment-distribution-box">
+                                <h4 style={{ fontSize: "13px", fontWeight: 800, marginBottom: "12px", color: "#1e293b" }}>Desglose por Método de Pago</h4>
+                                <div className="distrib-item">
+                                    <div className="distrib-label">
+                                        <span>📱 Yape / Plin</span>
+                                        <strong>S/ 820.00 (55%)</strong>
+                                    </div>
+                                    <div className="distrib-bar-bg"><div className="distrib-bar-fill" style={{ width: "55%", background: "#7c3aed" }}></div></div>
+                                </div>
+                                <div className="distrib-item" style={{ marginTop: "10px" }}>
+                                    <div className="distrib-label">
+                                        <span>💳 Tarjetas (POS Niubiz)</span>
+                                        <strong>S/ 415.20 (28%)</strong>
+                                    </div>
+                                    <div className="distrib-bar-bg"><div className="distrib-bar-fill" style={{ width: "28%", background: "#2563eb" }}></div></div>
+                                </div>
+                                <div className="distrib-item" style={{ marginTop: "10px" }}>
+                                    <div className="distrib-label">
+                                        <span>💵 Efectivo en Gaveta</span>
+                                        <strong>S/ 250.00 (17%)</strong>
+                                    </div>
+                                    <div className="distrib-bar-bg"><div className="distrib-bar-fill" style={{ width: "17%", background: "#059669" }}></div></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="module-modal-footer">
+                            <button className="btn-secondary" onClick={() => { setOpenModuleModal(null); setActiveMenuTab("caja"); }}>Cerrar</button>
+                            <button className="btn-primary" onClick={() => alert("Reporte Z generado e impreso correctamente.")}>🖨️ Imprimir Cuadre Z</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 3. Modal Cámaras de Seguridad */}
+            {openModuleModal === "camaras" && (
+                <div className="module-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) { setOpenModuleModal(null); setActiveMenuTab("caja"); } }}>
+                    <div className="module-modal-window module-modal-wide">
+                        <div className="module-modal-header">
+                            <div className="module-modal-title-group">
+                                <div className="module-modal-icon-badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="22" height="22">
+                                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                                        <circle cx="12" cy="13" r="3"></circle>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 className="module-modal-title">Cámaras & Seguridad en Vivo</h3>
+                                    <p className="module-modal-sub">Monitoreo 24/7 y detección de movimiento en tienda</p>
+                                </div>
+                            </div>
+                            <button className="module-modal-close" onClick={() => { setOpenModuleModal(null); setActiveMenuTab("caja"); }}>✕</button>
+                        </div>
+                        <div className="module-modal-body">
+                            <div className="cameras-grid">
+                                <div className="camera-feed-card">
+                                    <div className="cam-top-overlay">
+                                        <span className="cam-badge-rec">● REC</span>
+                                        <span className="cam-name">CAM 01 · Entrada Principal</span>
+                                    </div>
+                                    <div className="cam-screen">
+                                        <img src="https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=500&q=80" alt="Entrada" />
+                                        <div className="cam-scanline"></div>
+                                    </div>
+                                    <div className="cam-bottom-overlay">
+                                        <span>1080P HD · 30 FPS</span>
+                                        <span style={{ color: "#4ade80" }}>Normal</span>
+                                    </div>
+                                </div>
+                                <div className="camera-feed-card">
+                                    <div className="cam-top-overlay">
+                                        <span className="cam-badge-rec">● REC</span>
+                                        <span className="cam-name">CAM 02 · Zona de Cobro / Caja</span>
+                                    </div>
+                                    <div className="cam-screen">
+                                        <img src="https://images.unsplash.com/photo-1556742049-0a67e557224e?auto=format&fit=crop&w=500&q=80" alt="Caja" />
+                                        <div className="cam-scanline"></div>
+                                    </div>
+                                    <div className="cam-bottom-overlay">
+                                        <span>1080P HD · 30 FPS</span>
+                                        <span style={{ color: "#4ade80" }}>Normal</span>
+                                    </div>
+                                </div>
+                                <div className="camera-feed-card">
+                                    <div className="cam-top-overlay">
+                                        <span className="cam-badge-rec">● REC</span>
+                                        <span className="cam-name">CAM 03 · Balanza Inteligente</span>
+                                    </div>
+                                    <div className="cam-screen">
+                                        <img src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=500&q=80" alt="Balanza" />
+                                        <div className="cam-scanline"></div>
+                                    </div>
+                                    <div className="cam-bottom-overlay">
+                                        <span>1080P HD · 30 FPS</span>
+                                        <span style={{ color: "#4ade80" }}>Normal</span>
+                                    </div>
+                                </div>
+                                <div className="camera-feed-card">
+                                    <div className="cam-top-overlay">
+                                        <span className="cam-badge-rec">● REC</span>
+                                        <span className="cam-name">CAM 04 · Almacén Fresco</span>
+                                    </div>
+                                    <div className="cam-screen">
+                                        <img src="https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?auto=format&fit=crop&w=500&q=80" alt="Almacen" />
+                                        <div className="cam-scanline"></div>
+                                    </div>
+                                    <div className="cam-bottom-overlay">
+                                        <span>1080P HD · 30 FPS</span>
+                                        <span style={{ color: "#4ade80" }}>Normal</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="module-modal-footer">
+                            <button className="btn-secondary" onClick={() => { setOpenModuleModal(null); setActiveMenuTab("caja"); }}>Cerrar</button>
+                            <button className="btn-danger-panic" onClick={() => alert("🚨 Sirena de prueba activada correctamente.")}>🚨 Probar Sirena de Pánico</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 4. Modal Configuración Tributaria */}
+            {openModuleModal === "tributos" && (
+                <div className="module-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) { setOpenModuleModal(null); setActiveMenuTab("caja"); } }}>
+                    <div className="module-modal-window">
+                        <div className="module-modal-header">
+                            <div className="module-modal-title-group">
+                                <div className="module-modal-icon-badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="22" height="22">
+                                        <rect width="16" height="20" x="4" y="2" rx="2"></rect>
+                                        <line x1="8" x2="16" y1="6" y2="6"></line>
+                                        <line x1="16" x2="16" y1="14" y2="18"></line>
+                                        <path d="M16 10h.01"></path>
+                                        <path d="M12 10h.01"></path>
+                                        <path d="M8 10h.01"></path>
+                                        <path d="M12 14h.01"></path>
+                                        <path d="M8 14h.01"></path>
+                                        <path d="M12 18h.01"></path>
+                                        <path d="M8 18h.01"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 className="module-modal-title">Configuración Tributaria SUNAT</h3>
+                                    <p className="module-modal-sub">RUC, Boletas Electrónicas, Facturas y series autorizadas</p>
+                                </div>
+                            </div>
+                            <button className="module-modal-close" onClick={() => { setOpenModuleModal(null); setActiveMenuTab("caja"); }}>✕</button>
+                        </div>
+                        <div className="module-modal-body">
+                            <div className="form-grid">
+                                <div className="form-field">
+                                    <label>Número de RUC</label>
+                                    <input type="text" defaultValue="20608912341" readOnly className="form-input" />
+                                </div>
+                                <div className="form-field">
+                                    <label>Razón Social</label>
+                                    <input type="text" defaultValue="CASERITA SMART ORGANIC S.A.C." className="form-input" />
+                                </div>
+                                <div className="form-field">
+                                    <label>Serie Boleta de Venta</label>
+                                    <input type="text" defaultValue="B001 - Correlativo #004128" className="form-input" />
+                                </div>
+                                <div className="form-field">
+                                    <label>Serie Factura Electrónica</label>
+                                    <input type="text" defaultValue="F001 - Correlativo #001890" className="form-input" />
+                                </div>
+                                <div className="form-field full-width">
+                                    <label>Régimen Tributario</label>
+                                    <input type="text" defaultValue="Régimen MYPE Tributario (IGV 18% incluido)" readOnly className="form-input" />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="module-modal-footer">
+                            <button className="btn-secondary" onClick={() => { setOpenModuleModal(null); setActiveMenuTab("caja"); }}>Cancelar</button>
+                            <button className="btn-primary" onClick={() => { alert("Configuración SUNAT guardada."); setOpenModuleModal(null); setActiveMenuTab("caja"); }}>Guardar Configuración</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 5. Modal Ajustes del Sistema */}
+            {openModuleModal === "ajustes" && (
+                <div className="module-modal-backdrop" onClick={(e) => { if (e.target === e.currentTarget) { setOpenModuleModal(null); setActiveMenuTab("caja"); } }}>
+                    <div className="module-modal-window">
+                        <div className="module-modal-header">
+                            <div className="module-modal-title-group">
+                                <div className="module-modal-icon-badge" style={{ background: "rgba(16, 185, 129, 0.15)", color: "#10b981" }}>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="22" height="22">
+                                        <circle cx="12" cy="12" r="3"></circle>
+                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 className="module-modal-title">Ajustes del Sistema</h3>
+                                    <p className="module-modal-sub">Periféricos, sonido de caja, y reconocimiento de voz Claude</p>
+                                </div>
+                            </div>
+                            <button className="module-modal-close" onClick={() => { setOpenModuleModal(null); setActiveMenuTab("caja"); }}>✕</button>
+                        </div>
+                        <div className="module-modal-body">
+                            <div className="settings-list">
+                                <div className="setting-item">
+                                    <div>
+                                        <strong>🖨️ Impresora de Tickets Térmica</strong>
+                                        <p style={{ fontSize: "11px", color: "#64748b" }}>Impresión automática al completar cobro (80mm)</p>
+                                    </div>
+                                    <span className="status-pill connected">Conectada</span>
+                                </div>
+                                <div className="setting-item">
+                                    <div>
+                                        <strong>⚖️ Balanza Digital RS232</strong>
+                                        <p style={{ fontSize: "11px", color: "#64748b" }}>Tara y peso automático en tiempo real</p>
+                                    </div>
+                                    <span className="status-pill connected">Calibrada</span>
+                                </div>
+                                <div className="setting-item">
+                                    <div>
+                                        <strong>🔊 Sonidos de Caja & Beep de Escáner</strong>
+                                        <p style={{ fontSize: "11px", color: "#64748b" }}>Efectos de audio al escanear y cobrar</p>
+                                    </div>
+                                    <input type="checkbox" defaultChecked style={{ accentColor: "#10b981", width: "18px", height: "18px" }} />
+                                </div>
+                                <div className="setting-item">
+                                    <div>
+                                        <strong>🎤 Claude Voice Iluminado</strong>
+                                        <p style={{ fontSize: "11px", color: "#64748b" }}>Aura visual de voz y ondas de frecuencia activa</p>
+                                    </div>
+                                    <input type="checkbox" defaultChecked style={{ accentColor: "#10b981", width: "18px", height: "18px" }} />
+                                </div>
+                                {onSwitchClassic && (
+                                    <div className="setting-item">
+                                        <div>
+                                            <strong>⚙️ Interfaz Clásica Completa</strong>
+                                            <p style={{ fontSize: "11px", color: "#64748b" }}>Acceso avanzado a todos los paneles y ajustes antiguos</p>
+                                        </div>
+                                        <button onClick={onSwitchClassic} className="btn-secondary" style={{ padding: "6px 12px", fontSize: "11px" }}>Abrir Clásico</button>
+                                    </div>
+                                )}
+                                {onSwitchLanding && (
+                                    <div className="setting-item">
+                                        <div>
+                                            <strong>🌐 Landing Page Web</strong>
+                                            <p style={{ fontSize: "11px", color: "#64748b" }}>Página pública de bienvenida para clientes</p>
+                                        </div>
+                                        <button onClick={onSwitchLanding} className="btn-secondary" style={{ padding: "6px 12px", fontSize: "11px" }}>Ver Landing</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="module-modal-footer">
+                            <button className="btn-secondary" onClick={() => { setOpenModuleModal(null); setActiveMenuTab("caja"); }}>Cerrar</button>
+                            <button className="btn-primary" onClick={() => { alert("Ajustes guardados con éxito."); setOpenModuleModal(null); setActiveMenuTab("caja"); }}>Guardar Preferencias</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
             {/* Toast Notification */}
             {toastMessage && (
                 <div className="toast-notification show">
